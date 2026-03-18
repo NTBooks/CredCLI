@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node node_modules/esbuild/bin/esbuild src/cli.jsx --bundle --platform=node --format=esm --external:playwright --external:sharp --external:react-devtools-core --jsx=automatic --outfile=dist/cli.mjs)",
+      "Bash(node dist/cli.mjs list)",
+      "Bash(node dist/cli.mjs new --template 1)",
+      "Bash(pnpm add:*)",
+      "Bash(node scripts/build.mjs)"
+    ]
+  }
+}

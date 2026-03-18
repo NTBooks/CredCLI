@@ -1,0 +1,296 @@
+<!--CREDCLI:{"name":"Academic Transcript","description":"Official academic transcript with course table and GPA","width":1200,"height":1600,"fields":["FullName","FName","LName","Title","Institution","Issuer","Major","CourseName","GPA","Hours","IssueDate","ExpirationDate","CredentialID","Signature","Location","Notes","QRUrl","VerificationURL","WorkspaceLogo","WorkspaceIssuer","Course1Name","Course1Grade","Course1Credits","Course1Semester","Course2Name","Course2Grade","Course2Credits","Course2Semester","Course3Name","Course3Grade","Course3Credits","Course3Semester","Course4Name","Course4Grade","Course4Credits","Course4Semester","Course5Name","Course5Grade","Course5Credits","Course5Semester","Course6Name","Course6Grade","Course6Credits","Course6Semester","Course7Name","Course7Grade","Course7Credits","Course7Semester","Course8Name","Course8Grade","Course8Credits","Course8Semester","Course9Name","Course9Grade","Course9Credits","Course9Semester","Course10Name","Course10Grade","Course10Credits","Course10Semester","Course11Name","Course11Grade","Course11Credits","Course11Semester","Course12Name","Course12Grade","Course12Credits","Course12Semester"]}-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>Academic Transcript</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 1200px; min-height: 1600px;
+    background: #ffffff;
+    font-family: 'Inter', sans-serif;
+    color: #1a1a2e;
+    font-size: 13px;
+  }
+
+  .page { width: 1200px; min-height: 1600px; padding: 0; }
+
+  /* ── Header ── */
+  .header {
+    background: #0d1b4b;
+    color: white;
+    padding: 32px 60px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .header-left .institution {
+    font-family: 'Source Serif 4', serif;
+    font-size: 26px; font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .header-left .location { font-size: 12px; opacity: 0.7; letter-spacing: 1px; }
+  .header-left .doc-title {
+    font-size: 13px; opacity: 0.55; font-weight: 300;
+    letter-spacing: 3px; text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  .header-right { text-align: right; }
+  .header-right .issue-date { font-size: 12px; opacity: 0.7; margin-bottom: 4px; }
+  .header-right .cred-id { font-family: monospace; font-size: 11px; opacity: 0.5; }
+
+  /* ── Student info band ── */
+  .student-band {
+    background: #f0f4ff;
+    border-bottom: 2px solid #0d1b4b;
+    padding: 20px 60px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  .info-cell .label { font-size: 10px; font-weight: 600; color: #666; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 3px; }
+  .info-cell .value { font-size: 14px; font-weight: 600; color: #0d1b4b; }
+
+  /* ── Section title ── */
+  .section-title {
+    background: #0d1b4b;
+    color: #c9a84c;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 7px 60px;
+  }
+
+  /* ── Course table ── */
+  .courses-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .courses-table thead tr {
+    background: #e8edf8;
+    color: #0d1b4b;
+  }
+  .courses-table thead th {
+    padding: 9px 16px;
+    font-weight: 700;
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #bcc9e8;
+  }
+  .courses-table thead th:first-child { padding-left: 60px; }
+  .courses-table thead th:last-child { padding-right: 60px; text-align: right; }
+
+  .courses-table tbody tr { border-bottom: 1px solid #eef0f6; }
+  .courses-table tbody tr:nth-child(even) { background: #f8f9fd; }
+  .courses-table tbody tr.empty { display: none; }
+
+  .courses-table tbody td { padding: 9px 16px; }
+  .courses-table tbody td:first-child { padding-left: 60px; }
+  .courses-table tbody td:last-child { padding-right: 60px; text-align: right; }
+
+  .course-name { font-weight: 500; }
+  .semester-tag {
+    display: inline-block;
+    background: #e8edf8;
+    color: #0d1b4b;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 10px;
+  }
+
+  .grade-cell { font-weight: 700; font-size: 14px; }
+  .grade-A { color: #166534; }
+  .grade-B { color: #1d4ed8; }
+  .grade-C { color: #92400e; }
+  .grade-D { color: #b91c1c; }
+  .grade-F { color: #7f1d1d; }
+
+  /* ── Summary ── */
+  .summary-row {
+    background: #0d1b4b;
+    color: white;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 14px 60px;
+    gap: 48px;
+  }
+  .summary-item { text-align: center; }
+  .summary-item .s-label { font-size: 10px; opacity: 0.6; letter-spacing: 1.5px; text-transform: uppercase; }
+  .summary-item .s-value { font-size: 20px; font-weight: 700; color: #c9a84c; margin-top: 2px; }
+
+  /* ── Footer ── */
+  .footer {
+    padding: 28px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-top: 1px solid #e0e4f0;
+    margin-top: 16px;
+  }
+
+  .sig-block { display: flex; flex-direction: column; gap: 4px; }
+  .sig-line { width: 180px; height: 1px; background: #0d1b4b; margin-bottom: 4px; }
+  .sig-name { font-weight: 600; font-size: 13px; }
+  .sig-title { font-size: 11px; color: #666; }
+
+  .official-note {
+    font-size: 10px; color: #888; font-style: italic;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .qr-block { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .qr-block img { width: 80px; height: 80px; }
+  .qr-label { font-size: 9px; color: #aaa; text-align: center; }
+
+  /* Watermark */
+  .watermark {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-35deg);
+    font-family: 'Source Serif 4', serif;
+    font-size: 100px; font-weight: 600;
+    color: rgba(13,27,75,0.04);
+    letter-spacing: 8px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 0;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="watermark">OFFICIAL TRANSCRIPT</div>
+
+  <div class="header">
+    <div class="header-left">
+      <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:40px;width:auto;max-width:100px;object-fit:contain;margin-bottom:6px;opacity:0.9;" onerror="this.style.display='none'">
+      <div class="institution">{{WorkspaceIssuer}}</div>
+      <div class="location">{{Location}}</div>
+      <div class="doc-title">Official Academic Transcript</div>
+    </div>
+    <div class="header-right">
+      <div class="issue-date">Issued: {{IssueDate}}</div>
+      <div class="cred-id">{{CredentialID}}</div>
+    </div>
+  </div>
+
+  <div class="student-band">
+    <div class="info-cell">
+      <div class="label">Student Name</div>
+      <div class="value">{{FullName}}</div>
+    </div>
+    <div class="info-cell">
+      <div class="label">Programme</div>
+      <div class="value">{{Title}}</div>
+    </div>
+    <div class="info-cell">
+      <div class="label">Field of Study</div>
+      <div class="value">{{Major}}</div>
+    </div>
+    <div class="info-cell">
+      <div class="label">Enrolment Period</div>
+      <div class="value">{{CourseName}}</div>
+    </div>
+    <div class="info-cell">
+      <div class="label">Total Credit Hours</div>
+      <div class="value">{{Hours}}</div>
+    </div>
+    <div class="info-cell">
+      <div class="label">Issuing Authority</div>
+      <div class="value">{{Issuer}}</div>
+    </div>
+  </div>
+
+  <div class="section-title">Academic Record</div>
+
+  <table class="courses-table">
+    <thead>
+      <tr>
+        <th>Course</th>
+        <th>Semester / Term</th>
+        <th style="text-align:center;">Credits</th>
+        <th>Grade</th>
+      </tr>
+    </thead>
+    <tbody id="courseRows">
+      <!-- Rows rendered by JS below -->
+    </tbody>
+  </table>
+
+  <div class="summary-row">
+    <div class="summary-item">
+      <div class="s-label">Credits Earned</div>
+      <div class="s-value">{{Hours}}</div>
+    </div>
+    <div class="summary-item">
+      <div class="s-label">Cumulative GPA</div>
+      <div class="s-value">{{GPA}}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-name">{{Issuer}}</div>
+      <div class="sig-title">{{Signature}}</div>
+    </div>
+    <div class="official-note">
+      This is an official document issued by {{Institution}}.<br>
+      Any alteration renders this transcript invalid.<br>
+      Valid through {{ExpirationDate}}.
+    </div>
+    <div class="qr-block">
+      <img src="{{QR_CODE_IMAGE}}" alt="Verify">
+      <div class="qr-label">Scan to verify</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const courses = [
+    {name:'{{Course1Name}}',  grade:'{{Course1Grade}}',  credits:'{{Course1Credits}}',  sem:'{{Course1Semester}}'},
+    {name:'{{Course2Name}}',  grade:'{{Course2Grade}}',  credits:'{{Course2Credits}}',  sem:'{{Course2Semester}}'},
+    {name:'{{Course3Name}}',  grade:'{{Course3Grade}}',  credits:'{{Course3Credits}}',  sem:'{{Course3Semester}}'},
+    {name:'{{Course4Name}}',  grade:'{{Course4Grade}}',  credits:'{{Course4Credits}}',  sem:'{{Course4Semester}}'},
+    {name:'{{Course5Name}}',  grade:'{{Course5Grade}}',  credits:'{{Course5Credits}}',  sem:'{{Course5Semester}}'},
+    {name:'{{Course6Name}}',  grade:'{{Course6Grade}}',  credits:'{{Course6Credits}}',  sem:'{{Course6Semester}}'},
+    {name:'{{Course7Name}}',  grade:'{{Course7Grade}}',  credits:'{{Course7Credits}}',  sem:'{{Course7Semester}}'},
+    {name:'{{Course8Name}}',  grade:'{{Course8Grade}}',  credits:'{{Course8Credits}}',  sem:'{{Course8Semester}}'},
+    {name:'{{Course9Name}}',  grade:'{{Course9Grade}}',  credits:'{{Course9Credits}}',  sem:'{{Course9Semester}}'},
+    {name:'{{Course10Name}}', grade:'{{Course10Grade}}', credits:'{{Course10Credits}}', sem:'{{Course10Semester}}'},
+    {name:'{{Course11Name}}', grade:'{{Course11Grade}}', credits:'{{Course11Credits}}', sem:'{{Course11Semester}}'},
+    {name:'{{Course12Name}}', grade:'{{Course12Grade}}', credits:'{{Course12Credits}}', sem:'{{Course12Semester}}'},
+  ];
+
+  const tbody = document.getElementById('courseRows');
+  courses.forEach((c, i) => {
+    if (!c.name || c.name.trim() === '') return;
+    const gradeClass = c.grade.startsWith('A') ? 'grade-A'
+                     : c.grade.startsWith('B') ? 'grade-B'
+                     : c.grade.startsWith('C') ? 'grade-C'
+                     : c.grade.startsWith('D') ? 'grade-D'
+                     : c.grade === 'F'          ? 'grade-F' : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="course-name">${c.name}</td>
+      <td><span class="semester-tag">${c.sem || '—'}</span></td>
+      <td style="text-align:center;font-weight:600;">${c.credits || '—'}</td>
+      <td class="grade-cell ${gradeClass}">${c.grade || '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+</script>
+</body>
+</html>

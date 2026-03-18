@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CredCLI</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:  #1a237e;
+  --gold:  #c9a84c;
+  --bg:    #f0f2f8;
+  --card:  #ffffff;
+  --text:  #1a1a2e;
+  --muted: #6c757d;
+  --bdr:   #e2e6f0;
+  --sidebar-w: 220px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+
+/* ── Login ───────────────────────────────────── */
+#login-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0d1b4b 0%, #1a237e 60%, #283593 100%);
+}
+.login-card {
+  background: white; border-radius: 16px; padding: 48px 40px;
+  width: 360px; box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+  text-align: center;
+}
+.login-logo { font-size: 32px; font-weight: 700; color: var(--navy); letter-spacing: -1px; margin-bottom: 4px; }
+.login-logo span { color: var(--gold); }
+.login-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+.login-card .form-control { font-size: 14px; border-color: var(--bdr); }
+.login-card .form-control:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(26,35,126,0.12); }
+.btn-login { background: var(--navy); color: white; border: none; padding: 10px; font-weight: 600; font-size: 14px; border-radius: 8px; width: 100%; cursor: pointer; transition: background .2s; }
+.btn-login:hover { background: #283593; }
+.login-err { color: #dc3545; font-size: 13px; margin-top: 8px; }
+.login-sub2 { font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.token-info-grid { text-align:left; background:#f0f2ff; border:1px solid #d0d5f0; border-radius:10px; padding:14px 16px; margin-bottom:16px; }
+.token-info-grid > div { display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-size:13px; border-bottom:1px solid #e4e7f5; }
+.token-info-grid > div:last-child { border-bottom:none; }
+.ti-label { color:var(--muted); font-weight:600; font-size:11px; letter-spacing:.5px; text-transform:uppercase; }
+.ti-val { color:var(--navy); font-weight:500; text-align:right; word-break:break-all; max-width:200px; }
+.ti-val.expires-soon { color:#e65100; }
+.btn-enter { background: var(--gold); color: #1a1a2e; border: none; padding: 10px; font-weight: 700; font-size: 14px; border-radius: 8px; width: 100%; cursor: pointer; transition: background .2s; margin-top: 4px; }
+.btn-enter:hover { background: #b8973e; }
+
+/* ── App shell ───────────────────────────────── */
+#app { display: flex; height: 100vh; }
+
+/* ── Sidebar ─────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: var(--navy); color: white;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sb-brand {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.sb-brand-name { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+.sb-brand-name span { color: var(--gold); }
+.sb-brand-ver { font-size: 10px; color: rgba(255,255,255,0.35); letter-spacing: 1px; text-transform: uppercase; }
+.sb-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.sb-section { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.3); padding: 10px 20px 4px; }
+.sb-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px; font-size: 13px; font-weight: 500;
+  color: rgba(255,255,255,0.7); cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all .15s;
+  text-decoration: none;
+}
+.sb-item:hover { color: white; background: rgba(255,255,255,0.06); }
+.sb-item.active { color: white; border-left-color: var(--gold); background: rgba(255,255,255,0.08); }
+.sb-item i { font-size: 15px; width: 18px; text-align: center; }
+.sb-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.sb-server-info { font-size: 10px; color: rgba(255,255,255,0.3); margin-bottom: 10px; line-height: 1.5; }
+.btn-logout { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.12); padding: 6px 14px; font-size: 12px; border-radius: 6px; cursor: pointer; width: 100%; transition: all .15s; }
+.btn-logout:hover { background: rgba(255,255,255,0.15); color: white; }
+
+/* ── Main ────────────────────────────────────── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+#topbar {
+  background: white; border-bottom: 1px solid var(--bdr);
+  padding: 0 28px; height: 56px;
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+.topbar-crumb { font-size: 13px; color: var(--muted); }
+.topbar-crumb a { color: var(--navy); text-decoration: none; font-weight: 500; }
+.topbar-crumb a:hover { text-decoration: underline; }
+.topbar-crumb .sep { margin: 0 6px; color: var(--bdr); }
+.topbar-title { font-size: 14px; font-weight: 600; color: var(--text); }
+#page-content { flex: 1; overflow-y: auto; padding: 28px; }
+
+/* ── Cards / Stats ───────────────────────────── */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: white; border-radius: 12px; padding: 20px 24px; border: 1px solid var(--bdr); }
+.stat-card .s-val { font-size: 32px; font-weight: 700; color: var(--navy); line-height: 1; margin-bottom: 4px; }
+.stat-card .s-lbl { font-size: 12px; color: var(--muted); font-weight: 500; }
+.stat-card.gold .s-val { color: var(--gold); }
+.stat-card.green .s-val { color: #2e7d32; }
+
+.section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.section-hdr h5 { font-size: 14px; font-weight: 700; margin: 0; }
+
+/* ── Table ───────────────────────────────────── */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { background: #f8f9fd; padding: 9px 14px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--bdr); }
+.data-table td { padding: 11px 14px; border-bottom: 1px solid #f0f2f8; vertical-align: middle; }
+.data-table tbody tr:hover { background: #f8f9fd; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+/* ── Template cards ──────────────────────────── */
+.template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+.tmpl-card { background: white; border-radius: 12px; border: 1px solid var(--bdr); overflow: hidden; transition: box-shadow .2s; }
+.tmpl-card:hover { box-shadow: 0 4px 20px rgba(26,35,126,0.12); }
+.tmpl-preview-wrap { position: relative; height: 180px; overflow: hidden; background: #eaecf5; }
+.tmpl-preview-wrap iframe { width: 1200px; height: 900px; border: none; pointer-events: none; transform-origin: top left; position: absolute; top: 0; left: 0; }
+.tmpl-card-body { padding: 14px 16px; }
+.tmpl-card-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.tmpl-card-desc { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.4; }
+.tmpl-card-dim { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.tmpl-card-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* ── Template editor ─────────────────────────── */
+.editor-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.placeholder-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.chip { display: inline-block; background: #e8edf8; color: var(--navy); font-size: 11px; font-family: 'JetBrains Mono', monospace; padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: background .15s; user-select: none; }
+.chip:hover { background: #d0d8f0; }
+.ai-tip {
+  background: #fffbeb; border: 1px solid #f9d423; border-radius: 10px;
+  padding: 12px 16px; font-size: 13px; display: flex; gap: 12px;
+  align-items: flex-start; margin-bottom: 14px;
+}
+.ai-tip-icon { font-size: 20px; line-height: 1; }
+.ai-tip code { background: #fef3c7; padding: 1px 5px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #92400e; }
+.editor-split {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  height: calc(100vh - 320px); min-height: 480px;
+}
+.editor-pane, .preview-pane {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--bdr); border-radius: 10px; overflow: hidden;
+  background: white;
+}
+.pane-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; background: #f8f9fd; border-bottom: 1px solid var(--bdr);
+  font-size: 12px; font-weight: 600; color: var(--muted); flex-shrink: 0;
+}
+.pane-hdr select { font-size: 12px; border: 1px solid var(--bdr); border-radius: 4px; padding: 2px 6px; }
+#cm-container { flex: 1; overflow: hidden; }
+#cm-container .cm-editor { height: 100%; }
+#cm-container .cm-scroller { overflow: auto; }
+.preview-outer { flex: 1; overflow-y: auto; overflow-x: hidden; background: #e8eaf0; }
+.preview-scale-wrap { transform-origin: top left; display: block; box-shadow: 0 4px 24px rgba(0,0,0,0.25); }
+#preview-iframe { display: block; border: none; background: white; }
+
+/* ── Job detail ──────────────────────────────── */
+.job-detail-hdr { background: white; border-radius: 12px; border: 1px solid var(--bdr); padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px; }
+.job-id-badge { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; color: var(--navy); }
+.job-meta { font-size: 13px; color: var(--muted); }
+.job-meta strong { color: var(--text); }
+.section-card { background: white; border-radius: 12px; border: 1px solid var(--bdr); padding: 20px 24px; margin-bottom: 16px; }
+.section-card h6 { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.drop-zone {
+  border: 2px dashed var(--bdr); border-radius: 8px; padding: 28px;
+  text-align: center; cursor: pointer; transition: all .2s; position: relative;
+}
+.drop-zone:hover, .drop-zone.drag-over { border-color: var(--navy); background: #f0f2f8; }
+.drop-zone input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+.csv-preview { overflow-x: auto; margin-top: 12px; max-height: 200px; overflow-y: auto; }
+.csv-preview table { font-size: 11px; }
+.csv-preview th { background: var(--navy); color: white; padding: 5px 10px; }
+.csv-preview td { padding: 4px 10px; border-bottom: 1px solid var(--bdr); }
+.progress-log { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #e9ecef; background: #1a1a2e; border-radius: 8px; padding: 14px 16px; max-height: 200px; overflow-y: auto; line-height: 1.7; }
+.output-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.output-file { display: flex; align-items: center; gap: 10px; border: 1px solid var(--bdr); border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+.output-file .of-icon { font-size: 22px; color: var(--navy); }
+.output-file .of-name { flex: 1; font-size: 12px; word-break: break-all; }
+.output-file .of-size { font-size: 11px; color: var(--muted); }
+.output-file.is-png { flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; }
+.output-file.is-png .png-thumb {
+  width: 100%; aspect-ratio: 4/3; object-fit: contain; background: #f0f2f8;
+  cursor: zoom-in; display: block; transition: opacity .15s;
+}
+.output-file.is-png .png-thumb:hover { opacity: 0.88; }
+.output-file.is-png .png-footer { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+/* ── Lightbox ─────────────────────────────────── */
+#lightbox {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+  z-index: 2000; align-items: center; justify-content: center; cursor: zoom-out;
+}
+#lightbox.open { display: flex; }
+#lightbox img {
+  max-width: 92vw; max-height: 92vh; border-radius: 6px;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.6);
+  cursor: default; animation: lb-in .18s ease;
+}
+@keyframes lb-in { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
+#lightbox-close {
+  position: absolute; top: 18px; right: 22px; background: none; border: none;
+  color: white; font-size: 32px; cursor: pointer; line-height: 1; opacity: .8;
+}
+#lightbox-close:hover { opacity: 1; }
+.lb-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,0.12); border: none; color: white;
+  font-size: 28px; width: 48px; height: 64px; border-radius: 6px;
+  cursor: pointer; opacity: .75; transition: opacity .15s, background .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.lb-nav:hover { opacity: 1; background: rgba(255,255,255,0.22); }
+.lb-nav:disabled { opacity: .2; cursor: default; }
+#lb-prev { left: 16px; }
+#lb-next { right: 16px; }
+#lb-counter { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 13px; pointer-events: none; }
+
+/* ── Buttons ─────────────────────────────────── */
+.btn-primary-cred { background: var(--navy); color: white; border: none; padding: 8px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary-cred:hover { background: #283593; }
+.btn-gold { background: var(--gold); color: #1a1a2e; border: none; padding: 8px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-gold:hover { opacity: 0.85; }
+.btn-outline-cred { background: transparent; color: var(--navy); border: 1px solid var(--navy); padding: 7px 16px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-outline-cred:hover { background: var(--navy); color: white; }
+.btn-sm-cred { padding: 5px 12px; font-size: 12px; }
+.btn-danger-sm { background: transparent; color: #dc3545; border: 1px solid #dc3545; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+.btn-danger-sm:hover { background: #dc3545; color: white; }
+
+/* ── Badges ──────────────────────────────────── */
+.badge-cred { padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-yellow { background: #fef9c3; color: #854d0e; }
+.badge-gray { background: #f1f3f5; color: #6c757d; }
+.badge-navy { background: #e8edf8; color: var(--navy); }
+
+/* ── Toast ───────────────────────────────────── */
+.credcli-toast { background: white; border-radius: 10px; border: 1px solid var(--bdr); padding: 12px 16px; font-size: 13px; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); min-width: 280px; }
+.credcli-toast.success i { color: #22c55e; }
+.credcli-toast.error i { color: #ef4444; }
+
+/* ── Misc ────────────────────────────────────── */
+.page-hdr { margin-bottom: 22px; }
+.page-hdr h4 { font-size: 18px; font-weight: 700; margin-bottom: 3px; }
+.page-hdr p { font-size: 13px; color: var(--muted); margin: 0; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-state i { font-size: 48px; opacity: 0.2; display: block; margin-bottom: 12px; }
+.spinner-wrap { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 12px; color: var(--muted); font-size: 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }
+
+/* ── Workspace identity bar ──────────────────── */
+.sb-ws-identity {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; gap: 10px;
+}
+.sb-ws-logo-cell {
+  width: 34px; height: 34px; border-radius: 6px; flex-shrink: 0;
+  background: rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.35); font-size: 16px; overflow: hidden;
+}
+.sb-ws-logo-cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sb-ws-issuer { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.85); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-ws-issuer.empty { color: rgba(255,255,255,0.3); font-weight: 400; }
+.sb-ws-gear { color: rgba(255,255,255,0.3); font-size: 14px; text-decoration: none; flex-shrink: 0; }
+.sb-ws-gear:hover { color: var(--gold); }
+
+/* ── Settings / logo upload ──────────────────── */
+.logo-upload-area {
+  border: 2px dashed var(--bdr); border-radius: 10px; padding: 24px;
+  text-align: center; cursor: pointer; transition: all .2s; position: relative;
+}
+.logo-upload-area:hover, .logo-upload-area.drag-over { border-color: var(--navy); background: #f0f2f8; }
+.logo-upload-area input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+.logo-preview { max-height: 80px; max-width: 240px; border-radius: 6px; display: block; margin: 0 auto 10px; }
+</style>
+</head>
+<body>
+
+<!-- ── Login ──────────────────────────────────────────────────────────────── -->
+<div id="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">Cred<span>CLI</span></div>
+    <div class="login-sub">Credential &amp; Certificate Generator</div>
+
+    <!-- Step 1: Token URL input -->
+    <div id="login-step-input" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="login-sub2">Paste your Chainletter token URL to connect.</div>
+      <input class="form-control" type="url" id="inp-token-url" placeholder="https://…chainletter.io/jwt/…">
+      <button class="btn-login" id="btn-connect">Connect</button>
+      <div class="login-err" id="login-err" style="display:none"></div>
+    </div>
+
+    <!-- Step 2: Token info confirmation -->
+    <div id="login-step-info" style="display:none;flex-direction:column;gap:10px;">
+      <div class="token-info-grid">
+        <div><span class="ti-label">Server</span><span class="ti-val" id="ti-server"></span></div>
+        <div><span class="ti-label">Group</span><span class="ti-val" id="ti-group"></span></div>
+        <div><span class="ti-label">Expires</span><span class="ti-val" id="ti-expires"></span></div>
+      </div>
+      <button class="btn-enter" id="btn-enter">Enter CredCLI →</button>
+      <button class="btn-login" id="btn-back" style="background:#6c757d;margin-top:4px;">← Use a different token</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── App ────────────────────────────────────────────────────────────────── -->
+<div id="app" style="display:none">
+  <aside id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-name">Cred<span>CLI</span></div>
+      <div class="sb-brand-ver">v0.1.0 · web ui</div>
+    </div>
+    <div class="sb-ws-identity" id="sb-ws-identity">
+      <div class="sb-ws-logo-cell" id="sb-ws-logo-cell">
+        <i class="bi bi-building"></i>
+      </div>
+      <span class="sb-ws-issuer empty" id="sb-ws-issuer">Set issuer…</span>
+      <a class="sb-ws-gear" href="#/settings" title="Workspace Settings"><i class="bi bi-gear"></i></a>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">Workspace</div>
+      <a class="sb-item" data-route="/" href="#/"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <a class="sb-item" data-route="/templates" href="#/templates"><i class="bi bi-file-code-fill"></i> Templates</a>
+      <a class="sb-item" data-route="/jobs" href="#/jobs"><i class="bi bi-briefcase-fill"></i> Jobs</a>
+      <div class="sb-section" style="margin-top:8px">Actions</div>
+      <a class="sb-item" href="#/jobs/new"><i class="bi bi-plus-circle-fill"></i> New Job</a>
+      <div class="sb-section" style="margin-top:8px">Config</div>
+      <a class="sb-item" data-route="/settings" href="#/settings"><i class="bi bi-gear-fill"></i> Workspace Settings</a>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-server-info" id="sb-workspace"></div>
+      <button class="btn-logout" id="btn-logout"><i class="bi bi-box-arrow-left"></i> Logout</button>
+    </div>
+  </aside>
+
+  <div id="main">
+    <header id="topbar">
+      <div id="breadcrumb" class="topbar-crumb"></div>
+    </header>
+    <div id="page-content"></div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" style="position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999"></div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+  <button id="lightbox-close" onclick="closeLightbox()" aria-label="Close">&times;</button>
+  <button id="lb-prev" class="lb-nav" onclick="lbNavigate(-1);event.stopPropagation()" aria-label="Previous">&#8249;</button>
+  <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  <button id="lb-next" class="lb-nav" onclick="lbNavigate(1);event.stopPropagation()" aria-label="Next">&#8250;</button>
+  <div id="lb-counter"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module">
+import { EditorView, basicSetup } from 'https://esm.sh/codemirror@6.0.1';
+import { html as htmlLang }       from 'https://esm.sh/@codemirror/lang-html@6.4.9';
+import { oneDark }                from 'https://esm.sh/@codemirror/theme-one-dark@6.1.2';
+
+// ── State ────────────────────────────────────────────────────────────────────
+const _saved = (() => { try { return JSON.parse(localStorage.getItem('credcli_session') || 'null'); } catch { return null; } })();
+const S = {
+  token:      _saved?.token      || '',
+  tenant:     _saved?.tenant     || '',
+  groupname:  _saved?.groupname  || '',
+  webhookUrl: _saved?.webhookUrl || '',
+  expires:    _saved?.expires    || null,
+};
+let _editor = null; // active CodeMirror instance
+let _currentTemplate = null; // { width, height, file }
+
+// ── API ──────────────────────────────────────────────────────────────────────
+const API = {
+  h() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${S.token}` }; },
+  async request(method, url, body) {
+    const opts = { method, headers: this.h() };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    if (r.status === 401) { doLogout(); return null; }
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || r.statusText); }
+    return r.json();
+  },
+  get:    (u)    => API.request('GET',  u),
+  post:   (u, b) => API.request('POST', u, b),
+  put:    (u, b) => API.request('PUT',  u, b),
+  delete: (u)    => API.request('DELETE', u),
+};
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `credcli-toast ${type}`;
+  el.innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'x-circle-fill'}"></i><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+let _pendingSession = null; // holds bootstrap response before user confirms
+
+async function doConnect() {
+  const shortlink = document.getElementById('inp-token-url').value.trim();
+  const errEl = document.getElementById('login-err');
+  errEl.style.display = 'none';
+  const btn = document.getElementById('btn-connect');
+  btn.disabled = true; btn.textContent = 'Connecting…';
+  try {
+    const r = await fetch('/api/session/bootstrap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shortlink }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Connection failed');
+    _pendingSession = data;
+    // Show info step
+    document.getElementById('login-step-input').style.display = 'none';
+    document.getElementById('ti-server').textContent = (() => { try { return new URL(data.webhookUrl || shortlink).hostname; } catch { return data.tenant || shortlink; } })();
+    document.getElementById('ti-group').textContent = data.groupname || '—';
+    const expiresEl = document.getElementById('ti-expires');
+    if (data.expires) {
+      const d = new Date(data.expires);
+      expiresEl.textContent = d.toLocaleString();
+      expiresEl.classList.toggle('expires-soon', d - Date.now() < 7 * 24 * 3600 * 1000);
+    } else {
+      expiresEl.textContent = data.expiresIn ? `${data.expiresIn}s` : 'Unknown';
+    }
+    document.getElementById('login-step-info').style.display = 'flex';
+  } catch(e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Connect';
+  }
+}
+
+function doEnterApp() {
+  if (!_pendingSession) return;
+  const data = _pendingSession;
+  S.token      = data.token;
+  S.tenant     = data.tenant     || '';
+  S.groupname  = data.groupname  || '';
+  S.webhookUrl = data.webhookUrl || '';
+  S.expires    = data.expires    || null;
+  const session = { token: S.token, tenant: S.tenant, groupname: S.groupname, webhookUrl: S.webhookUrl, expires: S.expires };
+  localStorage.setItem('credcli_session', JSON.stringify(session));
+  document.cookie = `credcli_session=${encodeURIComponent(JSON.stringify(session))}; path=/; max-age=2592000; SameSite=Lax`;
+  _pendingSession = null;
+  showApp();
+  route();
+}
+
+function doBackToInput() {
+  _pendingSession = null;
+  document.getElementById('login-step-info').style.display = 'none';
+  document.getElementById('login-step-input').style.display = 'flex';
+  document.getElementById('login-err').style.display = 'none';
+}
+
+function doLogout() {
+  fetch('/api/auth/logout', { method:'POST', headers:{ Authorization: `Bearer ${S.token}` } }).catch(()=>{});
+  S.token = ''; S.tenant = ''; S.groupname = ''; S.webhookUrl = ''; S.expires = null;
+  localStorage.removeItem('credcli_session');
+  document.cookie = 'credcli_session=; path=/; max-age=0';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-step-info').style.display = 'none';
+  document.getElementById('login-step-input').style.display = 'flex';
+  document.getElementById('login-wrap').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  const label = S.groupname ? `${S.tenant || ''} / ${S.groupname}` : (S.tenant || 'Connected');
+  document.getElementById('sb-workspace').textContent = label;
+  loadWorkspaceIdentity();
+}
+
+async function loadWorkspaceIdentity() {
+  try {
+    const ws = await API.get('/api/workspace');
+    const logoCell = document.getElementById('sb-ws-logo-cell');
+    const issuerEl = document.getElementById('sb-ws-issuer');
+    if (ws.logo) {
+      logoCell.innerHTML = `<img src="${ws.logo}" alt="logo">`;
+    } else {
+      logoCell.innerHTML = '<i class="bi bi-building"></i>';
+    }
+    if (ws.issuerName) {
+      issuerEl.textContent = ws.issuerName;
+      issuerEl.className = 'sb-ws-issuer';
+    } else {
+      issuerEl.textContent = 'Set issuer…';
+      issuerEl.className = 'sb-ws-issuer empty';
+    }
+  } catch {}
+}
+
+// ── Router ───────────────────────────────────────────────────────────────────
+function navigate(hash) { window.location.hash = hash; }
+
+function setBreadcrumb(parts) {
+  const crumb = document.getElementById('breadcrumb');
+  crumb.innerHTML = parts.map((p, i) =>
+    i < parts.length - 1
+      ? `<a href="${p.href || '#'}">${p.label}</a><span class="sep">›</span>`
+      : `<span class="topbar-title">${p.label}</span>`
+  ).join('');
+}
+
+function setActiveNav(route) {
+  document.querySelectorAll('.sb-item[data-route]').forEach(el => {
+    el.classList.toggle('active', el.dataset.route === route);
+  });
+}
+
+// Destroy editor when navigating away
+let _previewObserver = null;
+function destroyEditor() {
+  if (_editor)          { _editor.destroy(); _editor = null; }
+  if (_previewObserver) { _previewObserver.disconnect(); _previewObserver = null; }
+  _currentTemplate = null;
+}
+
+function route() {
+  if (!S.token) { return; }
+  destroyEditor();
+  const hash = window.location.hash.replace('#/', '').replace('#', '') || '';
+  const parts = hash.split('/');
+  const page  = parts[0];
+
+  switch (page) {
+    case '':          setActiveNav('/');          renderDashboard();           break;
+    case 'templates': setActiveNav('/templates');
+      if (parts[1] === 'edit' && parts[2]) renderTemplateEditor(decodeURIComponent(parts[2]));
+      else renderTemplates();
+      break;
+    case 'jobs':      setActiveNav('/jobs');
+      if (parts[1] === 'new')  renderNewJob();
+      else if (parts[1])       renderJobDetail(parts[1]);
+      else                     renderJobs();
+      break;
+    case 'settings': setActiveNav('/settings'); renderSettings(); break;
+    default: renderDashboard();
+  }
+}
+
+// ── Render helpers ────────────────────────────────────────────────────────────
+function setPage(html) {
+  document.getElementById('page-content').innerHTML = html;
+}
+
+function fmt(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024*1024) return `${(bytes/1024).toFixed(1)} KB`;
+  return `${(bytes/1024/1024).toFixed(1)} MB`;
+}
+
+function relative(dt) {
+  const d = new Date(dt), now = Date.now(), diff = now - d;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
+  return d.toLocaleDateString();
+}
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+async function renderDashboard() {
+  setBreadcrumb([{ label: 'Dashboard' }]);
+  setPage(`<div class="spinner-wrap"><i class="bi bi-arrow-repeat spin"></i> Loading…</div>`);
+  const [templates, jobs] = await Promise.all([API.get('/api/templates'), API.get('/api/jobs')]);
+  const readyJobs = jobs.filter(j => j.recipientCount > 0);
+  const recentJobs = [...jobs].reverse().slice(0, 8);
+
+  setPage(`
+  <div class="page-hdr">
+    <h4>Dashboard</h4>
+    <p>Connected to <strong>${S.groupname || S.tenant || 'workspace'}</strong>. Your credential workspace at a glance.</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="s-val">${templates.length}</div><div class="s-lbl">Templates</div></div>
+    <div class="stat-card gold"><div class="s-val">${jobs.length}</div><div class="s-lbl">Total Jobs</div></div>
+    <div class="stat-card green"><div class="s-val">${readyJobs.length}</div><div class="s-lbl">Jobs Ready to Run</div></div>
+    <div class="stat-card"><div class="s-val">${jobs.reduce((a,j)=>a+j.recipientCount,0)}</div><div class="s-lbl">Total Recipients</div></div>
+  </div>
+
+  <div class="section-hdr">
+    <h5>Recent Jobs</h5>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-primary-cred btn-sm-cred" onclick="navigate('#/jobs/new')"><i class="bi bi-plus"></i> New Job</button>
+      <button class="btn-outline-cred btn-sm-cred" onclick="navigate('#/jobs')">View All</button>
+    </div>
+  </div>
+
+  <div style="background:white;border-radius:12px;border:1px solid var(--bdr);overflow:hidden;">
+  ${recentJobs.length === 0 ? `<div class="empty-state"><i class="bi bi-briefcase"></i>No jobs yet. <a href="#/jobs/new">Create one →</a></div>` : `
+    <table class="data-table">
+      <thead><tr><th>Job</th><th>Template</th><th>Recipients</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+        ${recentJobs.map(j => `<tr>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--navy)">${j.jobId}</span></td>
+          <td>${j.templateName || '—'}</td>
+          <td>${j.recipientCount > 0 ? `<span class="badge-cred badge-green">${j.recipientCount} recipients</span>` : `<span class="badge-cred badge-gray">empty</span>`}</td>
+          <td style="color:var(--muted);font-size:12px">${relative(j.createdAt)}</td>
+          <td style="text-align:right">
+            <button class="btn-outline-cred btn-sm-cred" onclick="navigate('#/jobs/${j.jobId}')">View</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`}
+  </div>`);
+}
+
+// ── Templates ─────────────────────────────────────────────────────────────────
+async function renderTemplates() {
+  setBreadcrumb([{ label: 'Templates' }]);
+  setPage(`<div class="spinner-wrap"><i class="bi bi-arrow-repeat spin"></i> Loading…</div>`);
+  const templates = await API.get('/api/templates');
+
+  const cards = templates.map(t => {
+    const scaleW = 240 / t.width;
+    const scaleH = 180 / t.height;
+    const scale  = Math.min(scaleW, scaleH);
+    return `
+    <div class="tmpl-card">
+      <div class="tmpl-preview-wrap">
+        <iframe src="/api/templates/${encodeURIComponent(t.file)}/raw"
+                style="width:${t.width}px;height:${t.height}px;transform:scale(${scale.toFixed(4)});"
+                loading="lazy" title="${t.name} preview"></iframe>
+      </div>
+      <div class="tmpl-card-body">
+        <div class="tmpl-card-name">${t.name}</div>
+        <div class="tmpl-card-desc">${t.description || 'Credential template'}</div>
+        <div class="tmpl-card-dim"><i class="bi bi-aspect-ratio"></i> ${t.width}×${t.height}px &nbsp;·&nbsp; ${t.fields.length} fields</div>
+        <div class="tmpl-card-actions">
+          <button class="btn-outline-cred btn-sm-cred" onclick="navigate('#/templates/edit/${encodeURIComponent(t.file)}')"><i class="bi bi-pencil"></i> Edit</button>
+          <button class="btn-primary-cred btn-sm-cred" onclick="quickNewJob('${t.file}')"><i class="bi bi-plus"></i> Use</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  setPage(`
+  <div class="page-hdr" style="display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <h4>Templates</h4>
+      <p>Select a template to preview and customise. Your edits are saved to your workspace.</p>
+    </div>
+    <button class="btn-primary-cred" onclick="showNewTemplateModal()">
+      <i class="bi bi-plus-lg"></i> New Template
+    </button>
+  </div>
+
+  <!-- New template modal -->
+  <div id="new-tmpl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:14px;padding:32px;width:440px;box-shadow:0 24px 64px rgba(0,0,0,0.3);">
+      <h5 style="margin-bottom:4px;font-size:16px;font-weight:700">New Template</h5>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px">
+        A blank template will be created with every available placeholder visible,
+        ready to customise in the editor or with an AI assistant.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">Template Name</label>
+          <input id="new-tmpl-name" class="form-control" style="font-size:14px"
+                 placeholder="e.g. Employee of the Month" maxlength="80">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">Canvas Size</label>
+          <select id="new-tmpl-size" class="form-control" style="font-size:14px">
+            <option value="1200x900">1200 × 900 — Landscape certificate (default)</option>
+            <option value="1200x1600">1200 × 1600 — Portrait / transcript</option>
+            <option value="900x1200">900 × 1200 — Portrait certificate</option>
+            <option value="600x600">600 × 600 — Square badge</option>
+            <option value="800x600">800 × 600 — Compact card</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:22px;justify-content:flex-end">
+        <button class="btn-outline-cred" onclick="hideNewTemplateModal()">Cancel</button>
+        <button class="btn-primary-cred" id="create-tmpl-btn" onclick="createNewTemplate()">
+          <i class="bi bi-plus-lg"></i> Create &amp; Edit
+        </button>
+      </div>
+      <div id="new-tmpl-err" style="color:#dc3545;font-size:12px;margin-top:10px;display:none"></div>
+    </div>
+  </div>
+
+  <div class="template-grid">${cards}</div>`);
+}
+
+async function quickNewJob(templateFile) {
+  try {
+    const { jobId } = await API.post('/api/jobs', { template: templateFile });
+    toast(`Created ${jobId}`);
+    navigate(`#/jobs/${jobId}`);
+  } catch(e) { toast(e.message, 'error'); }
+}
+window.quickNewJob = quickNewJob;
+
+// ── Template Editor ────────────────────────────────────────────────────────────
+async function renderTemplateEditor(templateFile) {
+  setBreadcrumb([
+    { label: 'Templates', href: '#/templates' },
+    { label: templateFile },
+  ]);
+  setPage(`<div class="spinner-wrap"><i class="bi bi-arrow-repeat spin"></i> Loading editor…</div>`);
+
+  const data = await API.get(`/api/templates/${encodeURIComponent(templateFile)}`);
+  _currentTemplate = { file: templateFile, width: data.meta?.width || 1200, height: data.meta?.height || 900 };
+  const fields = data.meta?.fields || [];
+
+  setPage(`
+  <div class="editor-toolbar">
+    <button class="btn-primary-cred btn-sm-cred" onclick="saveTemplate()"><i class="bi bi-floppy"></i> Save</button>
+    <button class="btn-outline-cred btn-sm-cred" onclick="resetTemplate()"><i class="bi bi-arrow-counterclockwise"></i> Reset to Original</button>
+    <div style="flex:1"></div>
+    <span style="font-size:12px;color:var(--muted)">Scale:</span>
+    <select id="preview-scale" onchange="applyPreviewScale()" style="font-size:12px;padding:4px 8px;border:1px solid var(--bdr);border-radius:6px;">
+      <option value="auto" selected>Fit Width</option>
+      <option value="0.5">50%</option>
+      <option value="0.75">75%</option>
+      <option value="1">100%</option>
+    </select>
+  </div>
+
+  <div class="ai-tip">
+    <div class="ai-tip-icon">💡</div>
+    <div>
+      <strong>Customise with AI:</strong> Copy the HTML below and paste it into Claude, ChatGPT, or Gemini.
+      Ask it to redesign the template however you like — just instruct the AI to
+      <strong>keep all <code>{{PLACEHOLDER}}</code> variables exactly as they appear</strong>.
+      Paste the result back here and save.
+    </div>
+  </div>
+
+  ${fields.length ? `
+  <div style="margin-bottom:12px;">
+    <span style="font-size:12px;color:var(--muted);font-weight:600;margin-right:8px;">Placeholders:</span>
+    <div class="placeholder-chips">
+      ${fields.map(f => `<span class="chip" title="Click to copy" onclick="copyChip('{{${f}}}')">{{${f}}}</span>`).join('')}
+    </div>
+  </div>` : ''}
+
+  <div class="editor-split">
+    <div class="editor-pane">
+      <div class="pane-hdr">
+        <span><i class="bi bi-code-slash"></i> HTML Template</span>
+        <span style="font-size:11px;opacity:0.6">${templateFile}</span>
+      </div>
+      <div id="cm-container"></div>
+    </div>
+    <div class="preview-pane">
+      <div class="pane-hdr">
+        <span><i class="bi bi-eye"></i> Live Preview</span>
+        <span style="font-size:11px;opacity:0.6">${_currentTemplate.width}×${_currentTemplate.height}px</span>
+      </div>
+      <div class="preview-outer" id="preview-outer">
+        <div class="preview-scale-wrap" id="preview-scale-wrap">
+          <iframe id="preview-iframe"
+            style="width:${_currentTemplate.width}px;height:${_currentTemplate.height}px;">
+          </iframe>
+        </div>
+      </div>
+    </div>
+  </div>`);
+
+  // Init CodeMirror
+  const container = document.getElementById('cm-container');
+  let debounceTimer;
+  _editor = new EditorView({
+    doc: data.html,
+    extensions: [
+      basicSetup,
+      htmlLang(),
+      oneDark,
+      EditorView.updateListener.of(update => {
+        if (update.docChanged) {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => updatePreview(_editor.state.doc.toString()), 600);
+        }
+      }),
+      EditorView.theme({ '&': { height: '100%', fontSize: '13px' }, '.cm-scroller': { overflow: 'auto' } }),
+    ],
+    parent: container,
+  });
+
+  // Initial preview
+  updatePreview(data.html);
+  applyPreviewScale();
+
+  // Re-scale whenever the panel is resized (e.g. window resize, sidebar toggle)
+  const outerEl = document.getElementById('preview-outer');
+  if (outerEl) {
+    _previewObserver = new ResizeObserver(() => applyPreviewScale());
+    _previewObserver.observe(outerEl);
+  }
+}
+
+function updatePreview(html) {
+  const iframe = document.getElementById('preview-iframe');
+  if (!iframe) return;
+  const prev = iframe.src;
+  const blob = new Blob([html], { type: 'text/html' });
+  iframe.src = URL.createObjectURL(blob);
+  iframe.onload = () => { if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev); };
+}
+
+function applyPreviewScale() {
+  const wrap  = document.getElementById('preview-scale-wrap');
+  const outer = document.getElementById('preview-outer');
+  const sel   = document.getElementById('preview-scale');
+  if (!wrap || !outer || !_currentTemplate) return;
+
+  const { width: tw, height: th } = _currentTemplate;
+  const availW = outer.clientWidth;
+  const s = (!sel || sel.value === 'auto')
+    ? availW / tw          // fill width exactly
+    : parseFloat(sel.value);
+
+  wrap.style.width           = `${tw}px`;
+  wrap.style.height          = `${th}px`;
+  wrap.style.transform       = `scale(${s})`;
+  wrap.style.transformOrigin = 'top left';
+  // Make outer tall enough so scaled content isn't clipped
+  outer.style.height = `${Math.ceil(th * s)}px`;
+}
+
+window.applyPreviewScale = applyPreviewScale;
+
+async function saveTemplate() {
+  if (!_editor || !_currentTemplate) return;
+  try {
+    await API.put(`/api/templates/${encodeURIComponent(_currentTemplate.file)}`, { html: _editor.state.doc.toString() });
+    toast('Template saved');
+  } catch(e) { toast(e.message, 'error'); }
+}
+window.saveTemplate = saveTemplate;
+
+async function resetTemplate() {
+  if (!_currentTemplate) return;
+  if (!confirm('Reset to the original package template? Your edits will be lost.')) return;
+  try {
+    const r = await API.post(`/api/templates/${encodeURIComponent(_currentTemplate.file)}/reset`, {});
+    if (_editor) {
+      _editor.dispatch({ changes: { from: 0, to: _editor.state.doc.length, insert: r.html } });
+    }
+    updatePreview(r.html);
+    toast('Template reset to original');
+  } catch(e) { toast(e.message, 'error'); }
+}
+window.resetTemplate = resetTemplate;
+
+function copyChip(text) {
+  navigator.clipboard.writeText(text).then(() => toast(`Copied ${text}`));
+}
+window.copyChip = copyChip;
+
+// ── Jobs list ─────────────────────────────────────────────────────────────────
+async function renderJobs() {
+  setBreadcrumb([{ label: 'Jobs' }]);
+  setPage(`<div class="spinner-wrap"><i class="bi bi-arrow-repeat spin"></i> Loading…</div>`);
+  const jobs = await API.get('/api/jobs');
+
+  setPage(`
+  <div class="page-hdr" style="display:flex;align-items:center;justify-content:space-between">
+    <div><h4>Jobs</h4><p>Mail-merge jobs in this workspace.</p></div>
+    <button class="btn-primary-cred" onclick="navigate('#/jobs/new')"><i class="bi bi-plus-lg"></i> New Job</button>
+  </div>
+
+  <div style="background:white;border-radius:12px;border:1px solid var(--bdr);overflow:hidden;">
+  ${jobs.length === 0
+    ? `<div class="empty-state"><i class="bi bi-briefcase"></i><div>No jobs yet.</div><div style="margin-top:10px"><a href="#/jobs/new">Create your first job →</a></div></div>`
+    : `<table class="data-table">
+      <thead><tr><th>Job ID</th><th>Template</th><th>Recipients</th><th>Created</th><th>Output</th><th></th></tr></thead>
+      <tbody>
+        ${[...jobs].reverse().map(j => `<tr>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy)">${j.jobId}</span></td>
+          <td>${j.templateName || '—'}</td>
+          <td>${j.recipientCount > 0
+            ? `<span class="badge-cred badge-green">${j.recipientCount}</span>`
+            : `<span class="badge-cred badge-gray">empty</span>`}
+          </td>
+          <td style="color:var(--muted);font-size:12px">${relative(j.createdAt)}</td>
+          <td style="font-size:12px;color:var(--muted)">${j.outputFiles?.length ? `${j.outputFiles.length} files` : '—'}</td>
+          <td style="text-align:right;white-space:nowrap">
+            <button class="btn-outline-cred btn-sm-cred" onclick="navigate('#/jobs/${j.jobId}')"><i class="bi bi-folder2-open"></i> Open</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`}
+  </div>`);
+}
+
+// ── New Job ───────────────────────────────────────────────────────────────────
+async function renderNewJob() {
+  setBreadcrumb([{ label: 'Jobs', href: '#/jobs' }, { label: 'New Job' }]);
+  setPage(`<div class="spinner-wrap"><i class="bi bi-arrow-repeat spin"></i> Loading templates…</div>`);
+  const templates = await API.get('/api/templates');
+
+  const cards = templates.map((t, i) => {
+    const scaleW = 220 / t.width, scaleH = 165 / t.height;
+    const scale  = Math.min(scaleW, scaleH);
+    return `
+    <div class="tmpl-card" id="sel-tmpl-${i}" onclick="selectTemplate(${i})"
+         style="cursor:pointer;border:2px solid transparent;transition:border .15s;">
+      <div class="tmpl-preview-wrap" style="height:165px;">
+        <iframe src="/api/templates/${encodeURIComponent(t.file)}/raw"
+                style="width:${t.width}px;height:${t.height}px;transform:scale(${scale.toFixed(4)});"
+                loading="lazy"></iframe>
+      </div>
+      <div class="tmpl-card-body">
+        <div class="tmpl-card-name">${t.name}</div>
+        <div class="tmpl-card-desc">${t.description}</div>
+        <div class="tmpl-card-dim">${t.width}×${t.height}px</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  setPage(`
+  <div class="page-hdr">
+    <h4>New Job</h4>
+    <p>Select a template to create a new mail-merge job.</p>
+  </div>
+
+  <div id="template-selector" style="margin-bottom:20px">
+    <div class="template-grid">${cards}</div>
+  </div>
+
+  <div id="create-action" style="display:none;margin-top:4px">
+    <button class="btn-primary-cred" id="create-job-btn" onclick="createJob()">
+      <i class="bi bi-plus-lg"></i> Create Job with Selected Template
+    </button>
+    <span id="sel-tmpl-label" style="margin-left:12px;font-size:13px;color:var(--muted)"></span>
+  </div>`);
+
+  window._selectedTemplate = null;
+  window.selectTemplate = (i) => {
+    window._selectedTemplate = templates[i];
+    document.querySelectorAll('[id^=sel-tmpl-]').forEach(el => el.style.borderColor = 'transparent');
+    const card = document.getElementById(`sel-tmpl-${i}`);
+    if (card) card.style.borderColor = 'var(--navy)';
+    document.getElementById('create-action').style.display = 'block';
+    document.getElementById('sel-tmpl-label').textContent = `Selected: ${templates[i].name}`;
+  };
+  window.createJob = async () => {
+    if (!window._selectedTemplate) return;
+    try {
+      const btn = document.getElementById('create-job-btn');
+      btn.disabled = true; btn.textContent = 'Creating…';
+      const { jobId } = await API.post('/api/jobs', { template: window._selectedTemplate.file });
+      toast(`Job ${jobId} created`);
+      navigate(`#/jobs/${jobId}`);
+    } catch(e) { toast(e.message, 'error'); }
+  };
+}
+
+// ── Job Detail ────────────────────────────────────────────────────────────────
+async function renderJobDetail(jobId) {
+  setBreadcrumb([{ label: 'Jobs', href: '#/jobs' }, { label: jobId }]);
+  setPage(`<div class="spinner-wrap"><i class="bi bi-arrow-repeat spin"></i> Loading…</div>`);
+  const job = await API.get(`/api/jobs/${jobId}`);
+  if (!job) return;
+
+  const hasData = job.recipientCount > 0;
+  const csvPreview = job.csvRows?.length
+    ? (() => {
+        const headers = Object.keys(job.csvRows[0]);
+        return `<div class="csv-preview"><table class="data-table">
+          <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${job.csvRows.slice(0,5).map(row=>`<tr>${headers.map(h=>`<td>${row[h]||''}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>
+        ${job.csvRows.length > 5 ? `<p style="font-size:12px;color:var(--muted);margin-top:6px">…and ${job.csvRows.length-5} more rows</p>` : ''}`;
+      })()
+    : hasData
+      ? `<p style="font-size:13px;color:var(--muted)">${job.recipientCount} recipient${job.recipientCount!==1?'s':''} loaded (preview unavailable — CSV may contain unquoted commas).</p>`
+      : '';
+
+  const outputSection = job.outputFiles?.length
+    ? renderOutputGrid(job.outputFiles, jobId)
+    : `<p style="font-size:13px;color:var(--muted)">No output yet. Run the job to generate credentials.</p>`;
+
+  setPage(`
+  <div class="job-detail-hdr">
+    <div>
+      <div class="job-id-badge">${job.jobId}</div>
+      <div class="job-meta" style="margin-top:4px">
+        <strong>${job.templateName || '—'}</strong>
+        &nbsp;·&nbsp; ${job.recipientCount} recipient${job.recipientCount !== 1 ? 's' : ''}
+        &nbsp;·&nbsp; ${job.width}×${job.height}px
+        &nbsp;·&nbsp; Created ${relative(job.createdAt)}
+      </div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <button class="btn-gold" onclick="runJob('${jobId}','pdf')" ${job.recipientCount===0?'disabled':''}>
+        <i class="bi bi-filetype-pdf"></i> Run → PDF
+      </button>
+      <button class="btn-outline-cred" onclick="runJob('${jobId}','png')" ${job.recipientCount===0?'disabled':''}>
+        <i class="bi bi-image"></i> Run → PNG
+      </button>
+    </div>
+  </div>
+
+  <!-- CSV Section -->
+  <div class="section-card">
+    <h6><i class="bi bi-table"></i> Mail Merge Data</h6>
+    ${hasData ? `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#16a34a">
+        <i class="bi bi-check-circle-fill"></i> ${job.recipientCount} recipient${job.recipientCount!==1?'s':''} loaded
+      </span>
+      <button class="btn-outline-cred btn-sm-cred" onclick="clearCSV('${jobId}')" style="margin-left:auto">
+        <i class="bi bi-x-circle"></i> Clear
+      </button>
+    </div>
+    ${csvPreview}
+    <details style="margin-top:14px">
+      <summary style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none">Replace CSV</summary>
+      <div style="margin-top:10px">` : `
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn-outline-cred btn-sm-cred" onclick="downloadFile('/api/jobs/${jobId}/csv','mailmerge.csv')">
+        <i class="bi bi-download"></i> Download CSV Template
+      </button>
+    </div>`}
+    <div class="drop-zone" id="drop-zone-${jobId}" onclick="document.getElementById('csv-upload-${jobId}').click()">
+      <input type="file" id="csv-upload-${jobId}" accept=".csv" onchange="uploadCSV('${jobId}',this)">
+      <i class="bi bi-cloud-upload" style="font-size:28px;color:var(--navy);opacity:0.5;display:block;margin-bottom:8px"></i>
+      <div style="font-size:13px;font-weight:600">${hasData ? 'Drop replacement CSV here or click to browse' : 'Drop your filled CSV here or click to browse'}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">Required fields: ${(job.fields||[]).join(', ') || 'see CSV template'}</div>
+    </div>
+    ${hasData ? `</div></details>` : ''}
+  </div>
+
+  <!-- Run log -->
+  <div class="section-card" id="run-section" style="${job.recipientCount===0?'opacity:0.5':''}">
+    <h6><i class="bi bi-play-circle"></i> Run Log</h6>
+    <div id="run-log" class="progress-log" style="min-height:60px">
+      <span style="opacity:0.4">Waiting for run…</span>
+    </div>
+    <div id="run-progress" style="margin-top:10px;display:none">
+      <div class="progress" style="height:6px;border-radius:3px;background:#e2e6f0">
+        <div class="progress-bar" id="run-progress-bar" style="background:var(--navy);width:0%;border-radius:3px;transition:width .3s"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="section-card">
+    <h6 style="margin-bottom:16px"><i class="bi bi-files"></i> Output Files</h6>
+    <div id="output-section">${outputSection}</div>
+  </div>`);
+
+  // Drag-over highlight
+  const dz = document.getElementById(`drop-zone-${jobId}`);
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadCSVFile(jobId, file);
+  });
+}
+
+async function uploadCSV(jobId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  await uploadCSVFile(jobId, file);
+}
+window.uploadCSV = uploadCSV;
+
+async function uploadCSVFile(jobId, file) {
+  if (!file) { toast('No file received — try again', 'error'); return; }
+  const fd = new FormData();
+  fd.append('csv', file);
+  try {
+    const r = await fetch(`/api/jobs/${jobId}/csv`, { method:'POST', headers:{ Authorization:`Bearer ${S.token}` }, body: fd });
+    if (!r.ok) throw new Error((await r.json()).error);
+    toast('CSV uploaded — reloading job…');
+    setTimeout(() => renderJobDetail(jobId), 800);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function clearCSV(jobId) {
+  try {
+    const r = await API.delete(`/api/jobs/${jobId}/csv`);
+    if (r) { toast('CSV cleared'); renderJobDetail(jobId); }
+  } catch(e) { toast(e.message, 'error'); }
+}
+window.clearCSV = clearCSV;
+
+async function runJob(jobId, format) {
+  const log = document.getElementById('run-log');
+  const progressBar = document.getElementById('run-progress-bar');
+  const progressWrap = document.getElementById('run-progress');
+  if (!log) return;
+  log.innerHTML = '';
+  progressWrap.style.display = 'block';
+
+  const append = (text, cls = '') => {
+    const line = document.createElement('div');
+    line.style.cssText = cls === 'ok' ? 'color:#4ade80' : cls === 'err' ? 'color:#f87171' : '';
+    line.textContent = text;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  append(`Starting ${format.toUpperCase()} render…`);
+
+  const es = new EventSource(`/api/jobs/${jobId}/run?format=${format}`, {
+    headers: { Authorization: `Bearer ${S.token}` },
+  });
+
+  // EventSource doesn't support custom headers in browser — use fetch with ReadableStream instead
+  es.close();
+
+  // Use fetch + ReadableStream for SSE with auth header
+  const resp = await fetch(`/api/jobs/${jobId}/run?format=${format}`, {
+    headers: { Authorization: `Bearer ${S.token}` },
+  });
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const parts = buf.split('\n\n');
+    buf = parts.pop();
+    for (const part of parts) {
+      const dataLine = part.split('\n').find(l => l.startsWith('data:'));
+      if (!dataLine) continue;
+      try {
+        const msg = JSON.parse(dataLine.slice(5));
+        if (msg.type === 'progress') {
+          append(`  ✔ ${msg.latest?.file || '…'}`, 'ok');
+          if (msg.total > 0) progressBar.style.width = `${Math.round(msg.done/msg.total*100)}%`;
+        } else if (msg.type === 'done') {
+          append(`\nDone! ${msg.results.length} credential(s) generated.`, 'ok');
+          progressBar.style.width = '100%';
+          toast(`${msg.results.length} credentials generated`);
+          // Refresh output section
+          setTimeout(async () => {
+            const files = await API.get(`/api/jobs/${jobId}/output`);
+            const sec = document.getElementById('output-section');
+            if (sec) sec.innerHTML = renderOutputGrid(files, jobId);
+          }, 500);
+        } else if (msg.type === 'error') {
+          append(`Error: ${msg.message}`, 'err');
+          toast(msg.message, 'error');
+        }
+      } catch {}
+    }
+  }
+}
+window.runJob = runJob;
+window.navigate = navigate;
+
+// ── PNG lightbox ──────────────────────────────────────────────────────────────
+let _lbUrls = [], _lbIdx = 0;
+
+function openLightbox(url) {
+  // Collect all currently loaded PNG thumbnails for navigation
+  _lbUrls = [...document.querySelectorAll('img.png-thumb[src]')].map(i => i.src);
+  _lbIdx = _lbUrls.indexOf(url);
+  if (_lbIdx === -1) { _lbUrls = [url]; _lbIdx = 0; }
+  _lbShow();
+  document.getElementById('lightbox').classList.add('open');
+  document.addEventListener('keydown', _lbKey);
+}
+function _lbShow() {
+  document.getElementById('lightbox-img').src = _lbUrls[_lbIdx];
+  const counter = document.getElementById('lb-counter');
+  counter.textContent = _lbUrls.length > 1 ? `${_lbIdx + 1} / ${_lbUrls.length}` : '';
+  document.getElementById('lb-prev').disabled = _lbIdx === 0;
+  document.getElementById('lb-next').disabled = _lbIdx === _lbUrls.length - 1;
+}
+function lbNavigate(dir) {
+  const next = _lbIdx + dir;
+  if (next >= 0 && next < _lbUrls.length) { _lbIdx = next; _lbShow(); }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightbox-img').src = '';
+  document.removeEventListener('keydown', _lbKey);
+}
+function _lbKey(e) {
+  if (e.key === 'Escape') closeLightbox();
+  else if (e.key === 'ArrowLeft') lbNavigate(-1);
+  else if (e.key === 'ArrowRight') lbNavigate(1);
+}
+window.openLightbox = openLightbox;
+window.closeLightbox = closeLightbox;
+window.lbNavigate = lbNavigate;
+
+// ── Output grid renderer ───────────────────────────────────────────────────────
+function renderOutputGrid(files, jobId) {
+  if (!files.length) return '<p style="font-size:13px;color:var(--muted)">No output files found.</p>';
+  const html = `<div class="output-grid">${files.map(f => {
+    const isPng = f.name.toLowerCase().endsWith('.png');
+    const fileUrl = `/api/jobs/${jobId}/output/${encodeURIComponent(f.name)}`;
+    const dlBtn = `<button class="btn-outline-cred btn-sm-cred" onclick="downloadFile('${fileUrl}','${f.name}')"><i class="bi bi-download"></i></button>`;
+    const delBtn = `<button class="btn-danger-sm" onclick="deleteOutputFile('${jobId}','${f.name}',this)" title="Delete"><i class="bi bi-trash"></i></button>`;
+    if (isPng) {
+      return `<div class="output-file is-png">
+        <img class="png-thumb" data-authsrc="${fileUrl}" alt="${f.name}" style="cursor:zoom-in">
+        <div class="png-footer">
+          <div class="of-name" style="flex:1">${f.name}</div>
+          <div class="of-size">${fmt(f.size)}</div>
+          ${dlBtn}${delBtn}
+        </div>
+      </div>`;
+    }
+    return `<div class="output-file">
+      <i class="bi bi-file-pdf of-icon"></i>
+      <div><div class="of-name">${f.name}</div><div class="of-size">${fmt(f.size)}</div></div>
+      ${dlBtn}${delBtn}
+    </div>`;
+  }).join('')}</div>`;
+  // Load thumbnails with auth after a microtask so DOM is updated
+  setTimeout(() => loadAuthThumbs(), 0);
+  return html;
+}
+
+async function loadAuthThumbs() {
+  const imgs = document.querySelectorAll('img.png-thumb[data-authsrc]');
+  await Promise.all([...imgs].map(async img => {
+    const url = img.dataset.authsrc;
+    try {
+      const r = await fetch(url, { headers: { Authorization: `Bearer ${S.token}` } });
+      if (!r.ok) throw new Error('fetch failed');
+      const blob = await r.blob();
+      const objUrl = URL.createObjectURL(blob);
+      img.src = objUrl;
+      img.onclick = () => openLightbox(objUrl);
+      delete img.dataset.authsrc;
+    } catch { img.style.display = 'none'; }
+  }));
+}
+
+async function deleteOutputFile(jobId, filename, btn) {
+  if (!confirm(`Delete "${filename}"?`)) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/jobs/${jobId}/output/${encodeURIComponent(filename)}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${S.token}` }
+    });
+    if (!r.ok) throw new Error(`Server returned ${r.status}`);
+    // Remove the card from the DOM
+    btn.closest('.output-file').remove();
+  } catch(e) {
+    toast(`Delete failed: ${e.message}`, 'error');
+    btn.disabled = false;
+  }
+}
+window.deleteOutputFile = deleteOutputFile;
+
+// Authenticated file download — plain <a href> can't send Bearer tokens
+async function downloadFile(url, filename) {
+  try {
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${S.token}` } });
+    if (!r.ok) throw new Error(`Server returned ${r.status}`);
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch(e) { toast(`Download failed: ${e.message}`, 'error'); }
+}
+window.downloadFile = downloadFile;
+
+// ── New Template modal ────────────────────────────────────────────────────────
+function showNewTemplateModal() {
+  const m = document.getElementById('new-tmpl-modal');
+  if (m) { m.style.display = 'flex'; document.getElementById('new-tmpl-name').focus(); }
+}
+function hideNewTemplateModal() {
+  const m = document.getElementById('new-tmpl-modal');
+  if (m) m.style.display = 'none';
+}
+window.showNewTemplateModal = showNewTemplateModal;
+window.hideNewTemplateModal = hideNewTemplateModal;
+
+async function createNewTemplate() {
+  const name = document.getElementById('new-tmpl-name')?.value?.trim();
+  const size = document.getElementById('new-tmpl-size')?.value || '1200x900';
+  const errEl = document.getElementById('new-tmpl-err');
+  const btn   = document.getElementById('create-tmpl-btn');
+
+  if (!name) { errEl.textContent = 'Please enter a template name.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  const [width, height] = size.split('x').map(Number);
+  btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating…';
+
+  try {
+    const { file } = await API.post('/api/templates', { name, width, height });
+    hideNewTemplateModal();
+    toast(`Template "${name}" created`);
+    navigate(`#/templates/edit/${encodeURIComponent(file)}`);
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-plus-lg"></i> Create & Edit';
+  }
+}
+window.createNewTemplate = createNewTemplate;
+
+// ── Workspace Settings ─────────────────────────────────────────────────────────
+let _pendingLogo = null; // base64 data URL staged before save
+
+async function renderSettings() {
+  setBreadcrumb([{ label: 'Workspace Settings' }]);
+  setPage(`<div class="spinner-wrap"><i class="bi bi-arrow-repeat spin"></i> Loading…</div>`);
+  const ws = await API.get('/api/workspace');
+  _pendingLogo = ws.logo || null;
+
+  const logoAreaContent = ws.logo
+    ? `<img id="logo-preview-img" class="logo-preview" src="${ws.logo}" alt="Logo preview">
+       <div style="font-size:12px;color:var(--muted)">Click or drop to replace</div>`
+    : `<i class="bi bi-image" style="font-size:32px;color:var(--navy);opacity:0.3;display:block;margin-bottom:8px"></i>
+       <div style="font-size:13px;font-weight:600">Drop image here or click to upload</div>
+       <div style="font-size:12px;color:var(--muted);margin-top:4px">PNG, JPG, SVG — embedded as base64 data URL</div>`;
+
+  setPage(`
+  <div class="page-hdr">
+    <h4>Workspace Settings</h4>
+    <p>The logo and issuer name are injected into credentials at render time via <code style="font-size:12px;background:#e8edf8;padding:1px 6px;border-radius:4px;color:var(--navy)">{{WorkspaceLogo}}</code> and <code style="font-size:12px;background:#e8edf8;padding:1px 6px;border-radius:4px;color:var(--navy)">{{WorkspaceIssuer}}</code>.</p>
+  </div>
+
+  <div style="max-width:560px">
+    <div class="section-card">
+      <h6><i class="bi bi-building"></i> Issuer Identity</h6>
+
+      <div style="margin-bottom:22px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Issuer / Organisation Name</label>
+        <input id="ws-issuer-input" class="form-control" style="font-size:14px"
+               placeholder="e.g. Acme University"
+               value="${(ws.issuerName || '').replace(/"/g, '&quot;')}">
+        <p style="font-size:12px;color:var(--muted);margin-top:5px">
+          Use <code style="font-size:11px;background:#f0f2f8;padding:1px 5px;border-radius:3px">{{WorkspaceIssuer}}</code> in any template to insert this text.
+        </p>
+      </div>
+
+      <div style="margin-bottom:22px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Logo</label>
+        <div class="logo-upload-area" id="logo-drop-zone" onclick="document.getElementById('logo-file-input').click()">
+          <input type="file" id="logo-file-input" accept="image/*">
+          <div id="logo-preview-wrap">${logoAreaContent}</div>
+        </div>
+        ${ws.logo ? `<button class="btn-danger-sm" style="margin-top:8px" onclick="clearLogo()"><i class="bi bi-x-circle"></i> Remove logo</button>` : '<span id="remove-logo-slot"></span>'}
+        <p style="font-size:12px;color:var(--muted);margin-top:8px">
+          Use <code style="font-size:11px;background:#f0f2f8;padding:1px 5px;border-radius:3px">{{WorkspaceLogo}}</code> as the <code style="font-size:11px;background:#f0f2f8;padding:1px 5px;border-radius:3px">src</code> of an <code style="font-size:11px;background:#f0f2f8;padding:1px 5px;border-radius:3px">&lt;img&gt;</code> in a template.
+        </p>
+      </div>
+
+      <div id="ws-save-err" style="display:none;color:#dc3545;font-size:12px;margin-bottom:10px"></div>
+      <button class="btn-primary-cred" onclick="saveWorkspaceSettings()">
+        <i class="bi bi-floppy"></i> Save Settings
+      </button>
+    </div>
+  </div>`);
+
+  // File input handler
+  document.getElementById('logo-file-input').addEventListener('change', function() {
+    if (this.files[0]) loadLogoFile(this.files[0]);
+  });
+
+  // Drag-and-drop
+  const dz = document.getElementById('logo-drop-zone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadLogoFile(file);
+  });
+}
+
+function loadLogoFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    _pendingLogo = e.target.result;
+    const wrap = document.getElementById('logo-preview-wrap');
+    if (wrap) {
+      wrap.innerHTML = `<img id="logo-preview-img" class="logo-preview" src="${_pendingLogo}" alt="Logo preview">
+        <div style="font-size:12px;color:var(--muted)">Click or drop to replace</div>`;
+    }
+    // Show remove button if not already there
+    const slot = document.getElementById('remove-logo-slot');
+    if (slot) slot.outerHTML = `<button class="btn-danger-sm" style="margin-top:8px" onclick="clearLogo()"><i class="bi bi-x-circle"></i> Remove logo</button>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearLogo() {
+  _pendingLogo = null;
+  const wrap = document.getElementById('logo-preview-wrap');
+  if (wrap) {
+    wrap.innerHTML = `<i class="bi bi-image" style="font-size:32px;color:var(--navy);opacity:0.3;display:block;margin-bottom:8px"></i>
+      <div style="font-size:13px;font-weight:600">Drop image here or click to upload</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">PNG, JPG, SVG — embedded as base64 data URL</div>`;
+  }
+  // Replace remove button with a slot placeholder
+  const removeBtn = document.querySelector('.btn-danger-sm');
+  if (removeBtn) removeBtn.outerHTML = '<span id="remove-logo-slot"></span>';
+}
+window.clearLogo = clearLogo;
+
+async function saveWorkspaceSettings() {
+  const issuerName = (document.getElementById('ws-issuer-input')?.value || '').trim();
+  const errEl = document.getElementById('ws-save-err');
+  try {
+    await API.put('/api/workspace', { issuerName, logo: _pendingLogo || '' });
+    toast('Workspace settings saved');
+    loadWorkspaceIdentity();
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+window.saveWorkspaceSettings = saveWorkspaceSettings;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.getElementById('btn-connect').addEventListener('click', doConnect);
+document.getElementById('inp-token-url').addEventListener('keydown', e => { if (e.key === 'Enter') doConnect(); });
+document.getElementById('btn-enter').addEventListener('click', doEnterApp);
+document.getElementById('btn-back').addEventListener('click', doBackToInput);
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+window.addEventListener('hashchange', route);
+
+// Pre-fill token URL if redirected from a Chainletter shortlink (?link=...)
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const link = params.get('link');
+  if (link) {
+    document.getElementById('inp-token-url').value = link;
+    // Clean up URL without reload
+    history.replaceState(null, '', window.location.pathname + window.location.hash);
+  }
+})();
+
+(async () => {
+  if (S.token) {
+    // Check if token is expired locally before hitting the server
+    if (S.expires && Date.now() > new Date(S.expires).getTime()) {
+      S.token = ''; localStorage.removeItem('credcli_session');
+      return;
+    }
+    try {
+      await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${S.token}` } })
+        .then(r => { if (!r.ok) throw new Error('expired'); });
+      showApp();
+      route();
+    } catch {
+      S.token = ''; localStorage.removeItem('credcli_session');
+    }
+  }
+})();
+</script>
+</body>
+</html>

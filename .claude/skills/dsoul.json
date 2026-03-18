@@ -1,0 +1,18 @@
+{
+  "skills": [
+    {
+      "cid": "QmPppUqL5oQYEWSk6xcXG4Tj9btTD8X6AUHEjNuHsohLeE",
+      "shortname": "TutorialGuy@generate-images:0.0.1",
+      "num": 267,
+      "src": "https://dsoul.org/diamond_file/qmpppuql5oqyewsk6xcxg4tj9bttd8x6auhejnuhsohlee/",
+      "hostname": "dsoul.org"
+    },
+    {
+      "cid": "QmZehK7H6q68hxQM185GDf8irNxUaniW3qhBnR7Grui2p6",
+      "shortname": "TutorialGuy@background-removal:0.0.1",
+      "num": 259,
+      "src": "https://dsoul.org/diamond_file/qmzehk7h6q68hxqm185gdf8irnxuaniw3qhbnr7grui2p6/",
+      "hostname": "dsoul.org"
+    }
+  ]
+}

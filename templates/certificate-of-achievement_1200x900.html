@@ -1,0 +1,293 @@
+<!--CREDCLI:{"name":"Certificate of Achievement","description":"Elegant achievement certificate for awards and recognition","width":1200,"height":900,"fields":["FullName","Title","CourseName","Institution","Issuer","IssueDate","ExpirationDate","CredentialID","Achievement","BadgeLevel","Signature","Location","Notes","QRUrl","VerificationURL","WorkspaceLogo","WorkspaceIssuer"]}-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>Certificate of Achievement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 1200px; height: 900px; overflow: hidden;
+    background: #fefefe;
+    font-family: 'Raleway', sans-serif;
+    color: #2c1810;
+  }
+
+  .page {
+    width: 1200px; height: 900px;
+    position: relative;
+    background: #fefefe;
+    overflow: hidden;
+  }
+
+  /* Gold accent bars */
+  .accent-top {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 8px;
+    background: linear-gradient(to right, #8b1a1a, #c9a84c, #8b1a1a);
+  }
+  .accent-bottom {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 8px;
+    background: linear-gradient(to right, #8b1a1a, #c9a84c, #8b1a1a);
+  }
+
+  /* Side accent lines */
+  .accent-left {
+    position: absolute; top: 8px; left: 24px; bottom: 8px;
+    width: 3px;
+    background: linear-gradient(to bottom, transparent, #c9a84c 20%, #8b1a1a 50%, #c9a84c 80%, transparent);
+  }
+  .accent-right {
+    position: absolute; top: 8px; right: 24px; bottom: 8px;
+    width: 3px;
+    background: linear-gradient(to bottom, transparent, #c9a84c 20%, #8b1a1a 50%, #c9a84c 80%, transparent);
+  }
+
+  /* Corner diamonds */
+  .diamond {
+    position: absolute;
+    width: 18px; height: 18px;
+    background: #c9a84c;
+    transform: rotate(45deg);
+  }
+  .diamond.tl { top: 16px; left: 16px; }
+  .diamond.tr { top: 16px; right: 16px; }
+  .diamond.bl { bottom: 16px; left: 16px; }
+  .diamond.br { bottom: 16px; right: 16px; }
+
+  /* Background watermark pattern */
+  .bg-pattern {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle at 15% 50%, rgba(139,26,26,0.03) 0%, transparent 50%),
+      radial-gradient(circle at 85% 50%, rgba(139,26,26,0.03) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  /* Decorative laurel branches — SVG left & right of title */
+  .laurel-left, .laurel-right {
+    position: absolute;
+    top: 50%; transform: translateY(-55%);
+    opacity: 0.12;
+  }
+  .laurel-left  { left: 40px; }
+  .laurel-right { right: 40px; transform: translateY(-55%) scaleX(-1); }
+
+  .content {
+    position: relative; z-index: 2;
+    height: 100%;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 30px 100px 24px;
+  }
+
+  /* Top brand */
+  .top-brand {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    margin-bottom: 10px;
+  }
+  .institution-name {
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px; font-weight: 800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #8b1a1a;
+  }
+  .location-text {
+    font-size: 10px; font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c9a84c;
+  }
+
+  .gold-rule {
+    width: 100%; height: 1px;
+    background: linear-gradient(to right, transparent, #c9a84c 30%, #8b1a1a 50%, #c9a84c 70%, transparent);
+    margin: 6px 0;
+  }
+
+  .cert-of-text {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #8b1a1a;
+    margin-bottom: 4px;
+  }
+
+  .cert-main-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 52px; font-weight: 700;
+    color: #2c1810;
+    letter-spacing: 2px;
+    text-align: center;
+    line-height: 1.1;
+    margin-bottom: 14px;
+  }
+
+  .presented-to {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16px; font-style: italic;
+    color: #666;
+    margin-bottom: 4px;
+  }
+
+  .recipient-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 52px; font-weight: 600; font-style: italic;
+    color: #8b1a1a;
+    text-align: center;
+    line-height: 1.1;
+    margin-bottom: 10px;
+  }
+
+  .for-label {
+    font-size: 13px; font-weight: 400; color: #666;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    margin-bottom: 4px;
+  }
+
+  .achievement-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-weight: 600;
+    color: #2c1810;
+    text-align: center;
+    line-height: 1.4;
+    max-width: 700px;
+    margin-bottom: 6px;
+  }
+
+  .title-line {
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #8b1a1a;
+    margin-bottom: 4px;
+  }
+
+  /* Level badge */
+  .level-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #2c1810;
+    color: #c9a84c;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    padding: 5px 16px;
+    border-radius: 2px;
+    margin-bottom: 12px;
+  }
+
+  /* Bottom row */
+  .bottom-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid rgba(201,168,76,0.3);
+  }
+
+  .sig-block { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .sig-line { width: 150px; height: 1px; background: #2c1810; margin-bottom: 4px; }
+  .sig-name { font-size: 12px; font-weight: 700; color: #2c1810; }
+  .sig-title { font-size: 10px; color: #888; font-style: italic; }
+
+  .centre-meta { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .meta-date { font-size: 12px; font-weight: 600; color: #2c1810; }
+  .meta-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #aaa; }
+  .meta-cred  { font-size: 9px; font-family: monospace; color: #bbb; }
+
+  .qr-block { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .qr-block img { width: 64px; height: 64px; }
+  .qr-verify { font-size: 8px; color: #bbb; text-transform: uppercase; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="accent-top"></div>
+  <div class="accent-bottom"></div>
+  <div class="accent-left"></div>
+  <div class="accent-right"></div>
+  <div class="diamond tl"></div>
+  <div class="diamond tr"></div>
+  <div class="diamond bl"></div>
+  <div class="diamond br"></div>
+  <div class="bg-pattern"></div>
+
+  <!-- Laurel SVGs -->
+  <svg class="laurel-left" width="60" height="400" viewBox="0 0 60 400">
+    <g stroke="#8b1a1a" stroke-width="1.5" fill="none">
+      <path d="M30 200 Q10 180 15 160 Q20 140 30 145"/>
+      <path d="M30 200 Q10 170 18 150 Q26 130 30 135"/>
+      <path d="M30 200 Q8 190 12 168 Q16 146 30 152"/>
+      <path d="M30 200 Q10 210 15 230 Q20 250 30 245"/>
+      <path d="M30 200 Q8 220 12 242 Q16 264 30 258"/>
+      <path d="M30 200 Q10 225 18 245 Q26 265 30 260"/>
+      <line x1="30" y1="140" x2="30" y2="280"/>
+    </g>
+  </svg>
+  <svg class="laurel-right" width="60" height="400" viewBox="0 0 60 400">
+    <g stroke="#8b1a1a" stroke-width="1.5" fill="none">
+      <path d="M30 200 Q10 180 15 160 Q20 140 30 145"/>
+      <path d="M30 200 Q10 170 18 150 Q26 130 30 135"/>
+      <path d="M30 200 Q8 190 12 168 Q16 146 30 152"/>
+      <path d="M30 200 Q10 210 15 230 Q20 250 30 245"/>
+      <path d="M30 200 Q8 220 12 242 Q16 264 30 258"/>
+      <path d="M30 200 Q10 225 18 245 Q26 265 30 260"/>
+      <line x1="30" y1="140" x2="30" y2="280"/>
+    </g>
+  </svg>
+
+  <div class="content">
+    <div class="top-brand">
+      <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:48px;width:auto;max-width:120px;object-fit:contain;margin-bottom:6px;" onerror="this.style.display='none'">
+      <div class="institution-name">{{WorkspaceIssuer}}</div>
+      <div class="location-text">{{Location}}</div>
+    </div>
+
+    <div class="gold-rule"></div>
+
+    <div class="cert-of-text">Certificate of</div>
+    <div class="cert-main-title">{{Title}}</div>
+
+    <div class="presented-to">Presented to</div>
+    <div class="recipient-name">{{FullName}}</div>
+
+    <div class="for-label">In recognition of</div>
+    <div class="achievement-text">{{Achievement}}</div>
+
+    <div class="title-line">{{CourseName}}</div>
+
+    <div class="level-badge">
+      ★ {{BadgeLevel}} Award
+    </div>
+
+    <div class="bottom-row">
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-name">{{Issuer}}</div>
+        <div class="sig-title">{{Signature}}</div>
+      </div>
+
+      <div class="centre-meta">
+        <div class="meta-label">Date of Issue</div>
+        <div class="meta-date">{{IssueDate}}</div>
+        <div class="meta-cred">{{CredentialID}}</div>
+      </div>
+
+      <div class="qr-block">
+        <img src="{{QR_CODE_IMAGE}}" alt="Verify">
+        <div class="qr-verify">Verify</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

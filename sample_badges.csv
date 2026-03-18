@@ -1,0 +1,6 @@
+FullName,CourseName,Institution,Issuer,IssueDate,CredentialID,BadgeLevel,Achievement,Notes,QRUrl,VerificationURL
+Jane Hartley,Machine Learning Fundamentals,MIT OpenCourseWare,Coursera,March 2026,CRED-2026-ML-00142,Gold,Successfully completed all modules with a distinction score of 97%,,https://verify.example.com/qr/00142,https://verify.example.com/00142
+Marcus Chen,Cybersecurity Essentials,Stanford University,CompTIA,February 2026,CRED-2026-CS-00287,Platinum,Demonstrated exceptional proficiency across all security domains,,https://verify.example.com/qr/00287,https://verify.example.com/00287
+Aisha Okonkwo,Cloud Architecture Fundamentals,AWS Training,Amazon Web Services,January 2026,CRED-2026-CA-00394,Silver,Completed foundational cloud architecture curriculum with honours,,https://verify.example.com/qr/00394,https://verify.example.com/00394
+Liam Fitzgerald,Data Engineering Bootcamp,DataCamp,DataCamp,March 2026,CRED-2026-DE-00521,Bronze,Finished core data engineering modules and submitted capstone project,,https://verify.example.com/qr/00521,https://verify.example.com/00521
+Sofia Mendez,UX Design Professional,Google Design,Google,February 2026,CRED-2026-UX-00678,Gold,"Achieved top marks in user research, prototyping, and accessibility",,https://verify.example.com/qr/00678,https://verify.example.com/00678
