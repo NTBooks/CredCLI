@@ -9,6 +9,20 @@ let _workspaceDir = null;
 export function setWorkspace(dir) { _workspaceDir = dir ? path.resolve(dir) : null; }
 export function getWorkspace() { return _workspaceDir; }
 
+// Returns the persistent data root: $PERSIST (resolved) or <cwd>/.data
+export function getDataDir() {
+  return process.env.PERSIST
+    ? path.resolve(process.env.PERSIST)
+    : path.join(process.cwd(), '.data');
+}
+
+// token.json lives at the root of the data dir, or cwd for backward compat
+export function getTokenPath() {
+  return process.env.PERSIST
+    ? path.join(path.resolve(process.env.PERSIST), 'token.json')
+    : path.join(process.cwd(), 'token.json');
+}
+
 export function getPackageTemplatesDir() {
   const candidates = [
     path.join(__dirname, '..', '..', 'templates'),  // dev: src/utils -> root
@@ -54,6 +68,8 @@ export function listTemplates() {
       path: path.join(dir, file),
       name: meta?.name ?? (nameMatch ? nameMatch[1].replace(/-/g, ' ') : file),
       description: meta?.description ?? '',
+      type: meta?.type ?? 'credential',
+      subject: meta?.subject ?? '',
       width: meta?.width ?? (nameMatch ? parseInt(nameMatch[2]) : 1200),
       height: meta?.height ?? (nameMatch ? parseInt(nameMatch[3]) : 900),
       fields: meta?.fields ?? [],
@@ -99,6 +115,19 @@ export function getNextJobId() {
   return `job${String(next).padStart(3, '0')}`;
 }
 
+export async function initTenantWorkspace(tenant) {
+  const baseDir = getDataDir();
+  const tenantDir = path.join(baseDir, tenant);
+  await fs.ensureDir(tenantDir);
+  const wsTemplates = path.join(tenantDir, 'templates');
+  if (!await fs.pathExists(wsTemplates)) {
+    await fs.copy(getPackageTemplatesDir(), wsTemplates);
+  }
+  await fs.ensureDir(path.join(tenantDir, 'jobs'));
+  setWorkspace(tenantDir);
+  return tenantDir;
+}
+
 export async function createJob(template) {
   const jobsDir = getJobsDir();
   await fs.ensureDir(jobsDir);
@@ -114,6 +143,7 @@ export async function createJob(template) {
   await fs.writeJson(path.join(jobDir, 'job.json'), {
     templateName: template.name,
     templateFile: template.file,
+    templateType: template.type ?? 'credential',
     createdAt: new Date().toISOString(),
     width: template.width,
     height: template.height,

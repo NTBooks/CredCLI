@@ -3,6 +3,7 @@ import { Box, Text, useInput, useApp } from 'ink';
 import fs from 'fs-extra';
 import path from 'path';
 import { BANNER } from '../banner.js';
+import { getTokenPath } from '../utils/jobs.js';
 
 export default function Setup({ onDone }) {
   const { exit } = useApp();
@@ -34,7 +35,8 @@ export default function Setup({ onDone }) {
       const data = await r.json();
       if (!data.success || !data.jwt) throw new Error(data.message || 'Token claim failed');
 
-      await fs.writeJson('token.json', {
+      await fs.ensureDir(path.dirname(getTokenPath()));
+      await fs.writeJson(getTokenPath(), {
         jwt:          data.jwt,
         webhookUrl:   data.webhookurl,
         tenant:       data.tenant,
@@ -92,7 +94,7 @@ export default function Setup({ onDone }) {
       <Text color="green" bold>✔ Registered</Text>
       <Text>  Tenant:  <Text color="cyan">{info.tenant || '—'}</Text></Text>
       <Text>  Group:   <Text color="cyan">{info.groupname || '—'}</Text></Text>
-      <Text color="gray">  Saved to <Text color="white">token.json</Text></Text>
+      <Text color="gray">  Saved to <Text color="white">{getTokenPath()}</Text></Text>
     </Box>
   );
 }

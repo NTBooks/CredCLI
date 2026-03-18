@@ -1,0 +1,13 @@
+services:
+  credcli:
+    build: .
+    ports:
+      - "3037:3037"
+    volumes:
+      - credcli_data:/data
+    environment:
+      - PERSIST=/data
+      - PORT=3037
+
+volumes:
+  credcli_data:
