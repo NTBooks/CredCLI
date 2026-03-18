@@ -491,7 +491,7 @@ export async function startServer(port = 3037) {
     res.json({ jobId, jobDir });
   });
 
-  app.get('/api/jobs/:id', auth, (req, res) => {
+  app.get('/api/jobs/:id', auth, async (req, res) => {
     const job = listJobs().find(j => j.jobId === req.params.id);
     if (!job) return res.status(404).json({ error: 'Job not found' });
     let csvRows = [];
@@ -499,11 +499,16 @@ export async function startServer(port = 3037) {
     const outputDir = path.join(job.jobDir, 'output');
     let outputFiles = [];
     try {
+      let resultsMap = {};
+      try {
+        const saved = await fs.readJson(path.join(outputDir, 'results.json'));
+        for (const r of saved) resultsMap[r.file] = r.row;
+      } catch {}
       outputFiles = fs.readdirSync(outputDir)
-        .filter(f => !f.startsWith('_tmp'))
+        .filter(f => !f.startsWith('_tmp') && f !== 'results.json')
         .map(f => {
           const stat = fs.statSync(path.join(outputDir, f));
-          return { name: f, size: stat.size, mtime: stat.mtime };
+          return { name: f, size: stat.size, mtime: stat.mtime, row: resultsMap[f] ?? null };
         });
     } catch {}
     res.json({ ...job, csvRows, outputFiles });
@@ -561,17 +566,22 @@ export async function startServer(port = 3037) {
   });
 
   // List output files
-  app.get('/api/jobs/:id/output', auth, (req, res) => {
+  app.get('/api/jobs/:id/output', auth, async (req, res) => {
     const job = listJobs().find(j => j.jobId === req.params.id);
     if (!job) return res.status(404).json({ error: 'Not found' });
     const outputDir = path.join(job.jobDir, 'output');
     let files = [];
     try {
+      let resultsMap = {};
+      try {
+        const saved = await fs.readJson(path.join(outputDir, 'results.json'));
+        for (const r of saved) resultsMap[r.file] = r.row;
+      } catch {}
       files = fs.readdirSync(outputDir)
-        .filter(f => !f.startsWith('_tmp'))
+        .filter(f => !f.startsWith('_tmp') && f !== 'results.json')
         .map(f => {
           const s = fs.statSync(path.join(outputDir, f));
-          return { name: f, size: s.size, mtime: s.mtime };
+          return { name: f, size: s.size, mtime: s.mtime, row: resultsMap[f] ?? null };
         });
     } catch {}
     res.json(files);
@@ -583,7 +593,13 @@ export async function startServer(port = 3037) {
     if (!job) return res.status(404).json({ error: 'Not found' });
     const filePath = path.join(job.jobDir, 'output', req.params.file);
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
-    res.download(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    const mime = ext === '.png' ? 'image/png' : ext === '.pdf' ? 'application/pdf' : 'application/octet-stream';
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(path.basename(filePath))}"`);
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', () => res.status(500).end());
+    stream.pipe(res);
   });
 
   // Delete a single output file
@@ -594,6 +610,115 @@ export async function startServer(port = 3037) {
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
     fs.removeSync(filePath);
     res.json({ ok: true });
+  });
+
+  // ── Chainletter integration ───────────────────────────────────────────────────
+
+  // List existing collections (groups) from Chainletter
+  app.get('/api/chainletter/collections', auth, async (req, res) => {
+    const { jwt, webhookUrl } = req.chainSession;
+    try {
+      const r = await fetch(webhookUrl, { headers: { Authorization: `Bearer ${jwt}` } });
+      const data = await r.json();
+      res.json(data);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Assign / lock a Chainletter collection to this job
+  app.patch('/api/jobs/:id/chainletter', auth, async (req, res) => {
+    const job = listJobs().find(j => j.jobId === req.params.id);
+    if (!job) return res.status(404).json({ error: 'Not found' });
+    const { collectionId, collectionName } = req.body;
+    if (!collectionId) return res.status(400).json({ error: 'collectionId required' });
+    const jobMetaPath = path.join(job.jobDir, 'job.json');
+    const meta = await fs.readJson(jobMetaPath);
+    meta.chainletterCollection = { id: collectionId, name: collectionName || collectionId };
+    await fs.writeJson(jobMetaPath, meta, { spaces: 2 });
+    res.json({ ok: true, collection: meta.chainletterCollection });
+  });
+
+  // Upload all output files to the assigned Chainletter collection (SSE stream)
+  app.get('/api/jobs/:id/send-to-chainletter', auth, async (req, res) => {
+    const job = listJobs().find(j => j.jobId === req.params.id);
+    if (!job) return res.status(404).json({ error: 'Not found' });
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+    const send = data => res.write(`data: ${JSON.stringify(data)}\n\n`);
+    try {
+      const { jwt, webhookUrl } = req.chainSession;
+      const meta = await fs.readJson(path.join(job.jobDir, 'job.json'));
+      const collection = meta.chainletterCollection;
+      if (!collection) throw new Error('No Chainletter collection assigned to this job');
+      const outputDir = path.join(job.jobDir, 'output');
+      const files = fs.readdirSync(outputDir)
+        .filter(f => !f.startsWith('_tmp') && f !== 'results.json');
+      send({ type: 'start', total: files.length });
+      let done = 0;
+      for (const filename of files) {
+        const filePath = path.join(outputDir, filename);
+        const ext = path.extname(filename).toLowerCase();
+        const mime = ext === '.png' ? 'image/png' : 'application/pdf';
+        const fileBuffer = await fs.readFile(filePath);
+        const formData = new FormData();
+        formData.append('file', new Blob([fileBuffer], { type: mime }), filename);
+        const r = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${jwt}`, 'group-id': collection.id },
+          body: formData,
+        });
+        const result = await r.json();
+        done++;
+        const alreadyExists = !result.success && /already exists/i.test(result.message || '');
+        if (!result.success && !alreadyExists) throw new Error(`Upload failed for ${filename}: ${result.message}`);
+        send({ type: 'progress', done, total: files.length, file: filename, hash: result.hash ?? null, skipped: alreadyExists });
+      }
+      send({ type: 'done', total: files.length, collectionId: collection.id });
+    } catch (e) {
+      send({ type: 'error', message: e.message });
+    }
+    res.end();
+  });
+
+  // Mark job as successfully sent to Chainletter
+  app.patch('/api/jobs/:id/chainletter-sent', auth, async (req, res) => {
+    const job = listJobs().find(j => j.jobId === req.params.id);
+    if (!job) return res.status(404).json({ error: 'Not found' });
+    const jobMetaPath = path.join(job.jobDir, 'job.json');
+    const meta = await fs.readJson(jobMetaPath);
+    meta.chainletterSent = true;
+    meta.chainletterSentAt = new Date().toISOString();
+    await fs.writeJson(jobMetaPath, meta, { spaces: 2 });
+    res.json({ ok: true });
+  });
+
+  // Stamp the Chainletter collection (blockchain postmark)
+  app.post('/api/jobs/:id/stamp-chainletter', auth, async (req, res) => {
+    const job = listJobs().find(j => j.jobId === req.params.id);
+    if (!job) return res.status(404).json({ error: 'Not found' });
+    const jobMetaPath = path.join(job.jobDir, 'job.json');
+    const meta = await fs.readJson(jobMetaPath);
+    const collection = meta.chainletterCollection;
+    if (!collection) return res.status(400).json({ error: 'No Chainletter collection assigned' });
+    const { jwt, webhookUrl } = req.chainSession;
+    try {
+      const r = await fetch(webhookUrl, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${jwt}`, 'group-id': collection.id },
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message || 'Stamp failed');
+      meta.chainletterStamped = true;
+      meta.chainletterStampedAt = new Date().toISOString();
+      await fs.writeJson(jobMetaPath, meta, { spaces: 2 });
+      res.json({ ok: true, filesStamped: data.files_stamped });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // ── SPA catch-all ────────────────────────────────────────────────────────────

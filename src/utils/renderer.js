@@ -84,10 +84,14 @@ export async function renderJob(jobDir, format = 'pdf', onProgress) {
     await page.close();
     fs.removeSync(tmpPath);
 
-    results.push({ name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath) });
+    results.push({ name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath), row: { ...row } });
     if (onProgress) onProgress(i + 1, rows.length, results[results.length - 1]);
   }
 
   await browser.close();
+
+  const resultsJsonPath = path.join(outputDir, 'results.json');
+  await fs.writeJson(resultsJsonPath, results, { spaces: 2 });
+
   return results;
 }

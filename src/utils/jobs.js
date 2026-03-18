@@ -79,7 +79,15 @@ export function listJobs() {
         const lines = csv.split('\n').filter(Boolean);
         recipientCount = Math.max(0, lines.length - 1); // subtract header
       } catch {}
-      return { jobId, jobDir, csvPath, recipientCount, ...info };
+      let outputCount = 0;
+      try {
+        const outDir = path.join(jobDir, 'output');
+        if (fs.existsSync(outDir)) {
+          outputCount = fs.readdirSync(outDir)
+            .filter(f => !f.startsWith('_tmp') && f !== 'results.json').length;
+        }
+      } catch {}
+      return { jobId, jobDir, csvPath, recipientCount, outputCount, ...info };
     });
 }
 
