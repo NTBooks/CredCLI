@@ -72,6 +72,7 @@ export default function StampChainletter({ jobArg }) {
       {info.filesStamped != null && (
         <Text color="gray">  Files:        <Text color="white">{info.filesStamped} stamped</Text></Text>
       )}
+      <Text color="gray">  Next:         <Text color="cyan">credcli email {info.jobId}</Text></Text>
     </Box>
   );
 }

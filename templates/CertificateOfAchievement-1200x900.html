@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Certificate of Achievement</title>
+    <style>
+        body {
+            margin: 0;
+            background: #f9fafb;
+            font-family: Inter, system-ui, -apple-system, sans-serif;
+            color: #111827;
+        }
+
+        .card {
+            width: 1200px;
+            height: 900px;
+            margin: 0 auto;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 36px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 16px;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #fff;
+            margin-bottom: 12px;
+        }
+
+        .brand {
+            font-size: .8rem;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: #2563eb;
+        }
+
+        h1 {
+            margin: .25em 0;
+            font-size: 2.4rem;
+        }
+
+        .holder {
+            font-size: 1.9rem;
+            font-weight: 700;
+            margin: 20px 0;
+        }
+
+        .body {
+            color: #374151;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .details {
+            margin-top: 10px;
+            color: #4b5563;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #4b5563;
+        }
+
+        .qr {
+            width: 140px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div>
+            <img class="logo" src="{{LogoSrc}}" alt="Logo" />
+            <div class="brand">Certificate of Achievement</div>
+            <div class="details">{{Institution}} · {{Issuer}}</div>
+        </div>
+        <div>
+            <h1>This certifies that</h1>
+            <div class="holder">{{FullName}}</div>
+            <div class="body">has achieved <strong>{{Achievement}}</strong> in recognition of exceptional performance
+                and commitment toward <strong>{{Title}}</strong>.</div>
+            <div class="details">Issued on {{IssueDate}} · Credential ID: {{CredentialID}}</div>
+            <div class="details">Expires: {{ExpirationDate}} · Verification: {{VerificationURL}}</div>
+        </div>
+        <div class="footer">
+            <div>Authorized by {{Issuer}}</div><img class="qr" src="{{QRCodeDataURL}}" alt="QR Code" />
+        </div>
+    </div>
+</body>
+
+</html>

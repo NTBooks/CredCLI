@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Diploma</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, -apple-system, sans-serif;
+            background: #f7f9ff;
+            color: #1f2937;
+        }
+
+        .card {
+            width: 1200px;
+            height: 900px;
+            padding: 48px;
+            box-sizing: border-box;
+            background: white;
+            border: 2px solid #dbeafe;
+            border-radius: 20px;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 16px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .issuer {
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-size: 0.75rem;
+            color: #2563eb;
+        }
+
+        .title {
+            font-size: 2.1rem;
+            margin: 0;
+            color: #111827;
+        }
+
+        .holder {
+            margin-top: 16px;
+        }
+
+        .holder-name {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .meta {
+            margin-top: 8px;
+            font-size: 1rem;
+            color: #4b5563;
+        }
+
+        .qr {
+            width: 140px;
+            height: 140px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #374151;
+            font-size: 0.9rem;
+        }
+
+        .subtle {
+            color: #6b7280;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img class="logo" src="{{LogoSrc}}" alt="Logo" />
+                <div>
+                    <div class="issuer">{{Institution}} · {{Issuer}}</div>
+                    <h1 class="title">Diploma of {{Title}}</h1>
+                </div>
+            </div>
+            <div><img class="qr" src="{{QRCodeDataURL}}" alt="QR Code" /></div>
+        </div>
+        <div class="holder">
+            <div class="subtle">This certifies that</div>
+            <h2 class="holder-name">{{FullName}}</h2>
+            <div class="meta">has completed the requirements for <strong>{{Major}}</strong> and has been awarded the
+                degree of <strong>{{Title}}</strong>.</div>
+            <div class="meta">GPA: {{GPA}} · Credential ID: {{CredentialID}}</div>
+            <div class="meta">Issued: {{IssueDate}} · Expires: {{ExpirationDate}}</div>
+        </div>
+        <div class="footer">
+            <div>{{Location}} • {{Signature}}</div>
+            <div class="subtle">Verify: {{VerificationURL}}</div>
+        </div>
+    </div>
+</body>
+
+</html>

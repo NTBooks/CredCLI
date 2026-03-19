@@ -1,4 +1,6 @@
 import express from 'express';
+import archiver from 'archiver';
+import nodemailer from 'nodemailer';
 
 // ── Master placeholder list ───────────────────────────────────────────────────
 // Every field the renderer understands. New blank templates show all of these.
@@ -292,7 +294,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import { randomUUID } from 'crypto';
 import {
-  getWorkspace, getTemplatesDir,
+  getWorkspace, getTemplatesDir, setWorkspace,
   listTemplates, listJobs, createJob,
   parseTemplateMeta, getPackageTemplatesDir,
   initTenantWorkspace, getDataDir,
@@ -306,15 +308,45 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ── Auth (Chainletter token-based) ───────────────────────────────────────────
 const activeSessions = new Map(); // credcli-token → { jwt, webhookUrl, tenant, groupname, expires }
 
+function getSessionsPath() {
+  return path.join(getDataDir(), 'sessions.json');
+}
+
+function loadSessions() {
+  try {
+    const data = fs.readJsonSync(getSessionsPath());
+    const now = Date.now();
+    for (const [token, session] of Object.entries(data)) {
+      // Skip expired sessions
+      if (session.expires && now > new Date(session.expires).getTime()) continue;
+      activeSessions.set(token, session);
+    }
+  } catch { /* no sessions file yet */ }
+}
+
+function persistSessions() {
+  try {
+    const obj = {};
+    for (const [token, session] of activeSessions) obj[token] = session;
+    fs.ensureDirSync(getDataDir());
+    fs.writeJsonSync(getSessionsPath(), obj, { spaces: 2 });
+  } catch { /* best effort */ }
+}
+
 function auth(req, res, next) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   const session = token && activeSessions.get(token);
-  if (session) { req.chainSession = session; return next(); }
+  if (session) {
+    req.chainSession = session;
+    setWorkspace(path.join(getDataDir(), session.tenant));
+    return next();
+  }
   res.status(401).json({ error: 'Unauthorized' });
 }
 
 // ── Server factory ────────────────────────────────────────────────────────────
 export async function startServer(port = 3037) {
+  loadSessions();
   const app = express();
   app.use(express.json({ limit: '10mb' }));
 
@@ -352,6 +384,7 @@ export async function startServer(port = 3037) {
         expires: data.expires,
         expiresIn: data.expires_in,
       });
+      persistSessions();
       res.json({
         token,
         webhookUrl: data.webhookurl,
@@ -370,6 +403,7 @@ export async function startServer(port = 3037) {
     const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
     const { tenant, groupname } = req.chainSession;
     activeSessions.delete(token);
+    persistSessions();
     console.log(`[auth] Logout — tenant: ${tenant}, group: ${groupname}`);
     res.json({ ok: true });
   });
@@ -385,18 +419,72 @@ export async function startServer(port = 3037) {
   app.get('/api/workspace', auth, async (_req, res) => {
     try {
       const cfg = await fs.readJson(getWsConfigPath());
-      res.json({ issuerName: cfg.issuerName || '', logo: cfg.logo || '' });
+      const smtp = cfg.smtp || {};
+      res.json({
+        issuerName: cfg.issuerName || '',
+        logo: cfg.logo || '',
+        smtp: {
+          host: smtp.host || '',
+          port: smtp.port || 587,
+          secure: smtp.secure || false,
+          user: smtp.user || '',
+          fromAddress: smtp.fromAddress || '',
+          hasPass: !!(smtp.pass),
+        },
+      });
     } catch {
-      res.json({ issuerName: '', logo: '' });
+      res.json({ issuerName: '', logo: '', smtp: { host: '', port: 587, secure: false, user: '', fromAddress: '', hasPass: false } });
     }
   });
 
   app.put('/api/workspace', auth, async (req, res) => {
-    const { issuerName = '', logo = '' } = req.body ?? {};
+    const { issuerName = '', logo = '', smtp } = req.body ?? {};
     const logoCheck = validateLogoValue(logo);
     if (!logoCheck.ok) return res.status(400).json({ error: logoCheck.error });
-    await fs.writeJson(getWsConfigPath(), { issuerName, logo }, { spaces: 2 });
+    let existing = {};
+    try { existing = await fs.readJson(getWsConfigPath()); } catch {}
+    const existingSmtp = existing.smtp || {};
+    const newSmtp = smtp ? {
+      host: smtp.host || '',
+      port: Number(smtp.port) || 587,
+      secure: !!smtp.secure,
+      user: smtp.user || '',
+      // Keep existing password if caller sends empty string (masked field)
+      pass: smtp.pass || existingSmtp.pass || '',
+      fromAddress: smtp.fromAddress || '',
+    } : existingSmtp;
+    await fs.writeJson(getWsConfigPath(), { issuerName, logo, smtp: newSmtp }, { spaces: 2 });
     res.json({ ok: true });
+  });
+
+  // Test SMTP settings by sending a test email
+  app.post('/api/workspace/smtp/test', auth, async (req, res) => {
+    const { to } = req.body ?? {};
+    if (!to) return res.status(400).json({ error: 'to address required' });
+    let cfg = {};
+    try { cfg = await fs.readJson(getWsConfigPath()); } catch {}
+    const smtp = cfg.smtp || {};
+    if (!smtp.host) return res.status(400).json({ error: 'SMTP host not configured' });
+    if (!smtp.pass) return res.status(400).json({ error: 'SMTP password not set' });
+    const fromAddress = smtp.fromAddress || smtp.user || 'noreply@example.com';
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtp.host,
+        port: Number(smtp.port) || 587,
+        secure: !!smtp.secure,
+        auth: { user: smtp.user, pass: smtp.pass },
+      });
+      await transporter.sendMail({
+        from: fromAddress,
+        to,
+        subject: 'CredCLI SMTP Test',
+        text: `This is a test email from CredCLI.\n\nSMTP host: ${smtp.host}\nFrom: ${fromAddress}`,
+        html: `<p>This is a test email from <strong>CredCLI</strong>.</p><p style="color:#888;font-size:12px">SMTP host: ${smtp.host} &nbsp;·&nbsp; From: ${fromAddress}</p>`,
+      });
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // ── Template routes ──────────────────────────────────────────────────────────
@@ -822,6 +910,40 @@ export async function startServer(port = 3037) {
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
+  });
+
+  // Download all EML files from mail_merge as a ZIP
+  app.get('/api/jobs/:id/output/mail_merge.zip', auth, (req, res) => {
+    const job = listJobs().find(j => j.jobId === req.params.id);
+    if (!job) return res.status(404).json({ error: 'Not found' });
+    const mmDir = path.join(job.jobDir, 'output', 'mail_merge');
+    if (!fs.existsSync(mmDir)) return res.status(404).json({ error: 'No mail_merge folder' });
+    const files = fs.readdirSync(mmDir).filter(f => !f.startsWith('_tmp') && f.endsWith('.eml'));
+    if (!files.length) return res.status(404).json({ error: 'No EML files found' });
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="emails-${req.params.id}.zip"`);
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', err => { console.error('[zip] Error:', err.message); res.end(); });
+    archive.pipe(res);
+    for (const f of files) archive.file(path.join(mmDir, f), { name: f });
+    archive.finalize();
+  });
+
+  // Download all credential images (PNG/PDF) as a ZIP
+  app.get('/api/jobs/:id/output/credentials.zip', auth, (req, res) => {
+    const job = listJobs().find(j => j.jobId === req.params.id);
+    if (!job) return res.status(404).json({ error: 'Not found' });
+    const outputDir = path.join(job.jobDir, 'output');
+    let files = [];
+    try { files = fs.readdirSync(outputDir).filter(f => !f.startsWith('_tmp') && /\.(pdf|png)$/i.test(f)); } catch {}
+    if (!files.length) return res.status(404).json({ error: 'No credential files found' });
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="credentials-${req.params.id}.zip"`);
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', err => { console.error('[zip] Error:', err.message); res.end(); });
+    archive.pipe(res);
+    for (const f of files) archive.file(path.join(outputDir, f), { name: f });
+    archive.finalize();
   });
 
   // ── SPA catch-all ────────────────────────────────────────────────────────────

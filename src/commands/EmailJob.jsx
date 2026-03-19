@@ -62,7 +62,15 @@ export default function EmailJob({ jobArg, emailTemplate }) {
         log(`Template: ${templateName}`);
         log(`Recipients: ${results.length}`);
 
-        await generateMailMergeFolder(outputDir, results, emailTemplateHtml, emailTemplateMeta, {}, (event) => {
+        // Load stored claim links (populated by "credcli send")
+        const jobMetaPath = path.join(job.jobDir, 'job.json');
+        let claimLinks = {};
+        try {
+          const meta = await fs.readJson(jobMetaPath);
+          claimLinks = meta.chainletterClaimLinks ?? {};
+        } catch {}
+
+        await generateMailMergeFolder(outputDir, results, emailTemplateHtml, emailTemplateMeta, claimLinks, (event) => {
           if (event.type === 'mail_merge_file') log(`  ✔ ${event.file}`, 'green');
           else if (event.type === 'mail_merge_done') setSummary({ count: event.count, outputDir });
         });

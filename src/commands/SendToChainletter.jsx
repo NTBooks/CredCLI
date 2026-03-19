@@ -83,9 +83,27 @@ export default function SendToChainletter({ jobArg }) {
           }
         }
 
-        // Mark as sent
-        meta.chainletterSent   = true;
-        meta.chainletterSentAt = new Date().toISOString();
+        // Fetch claim links for all uploaded files from Chainletter
+        const claimLinks = {};
+        try {
+          const serverBase = new URL(token.webhookUrl).origin;
+          const linksResp = await fetch(token.webhookUrl, {
+            headers: { Authorization: `Bearer ${token.jwt}`, 'group-id': collection.id, 'export-links': 'true' },
+          });
+          const filesData = await linksResp.json();
+          const filesList = Array.isArray(filesData) ? filesData : (filesData.files ?? filesData.data ?? []);
+          for (const f of filesList) {
+            const name = f.name || f.filename || '';
+            const link = f.link || f.url || f.claim_link || f.download_link
+              || (f.hash ? `${serverBase}/view/${f.hash}` : null);
+            if (name && link) claimLinks[name] = link;
+          }
+        } catch {}
+
+        // Mark as sent and persist claim links
+        meta.chainletterSent       = true;
+        meta.chainletterSentAt     = new Date().toISOString();
+        meta.chainletterClaimLinks = claimLinks;
         await fs.writeJson(jobMetaPath, meta, { spaces: 2 });
 
         setSummary({ total: files.length, skipped, collectionId: collection.id, jobId: job.jobId });

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Badge</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, -apple-system, sans-serif;
+            background: #111827;
+            color: #f9fafb;
+            display: grid;
+            place-items: center;
+            height: 100vh;
+        }
+
+        .badge {
+            width: 800px;
+            height: 800px;
+            border-radius: 28px;
+            background: linear-gradient(165deg, #0f172a, #1f2937 55%, #111827);
+            padding: 32px;
+            box-sizing: border-box;
+            border: 2px solid #3b82f6;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            width: 90px;
+            height: 90px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+        }
+
+        .small {
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 0.7rem;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin: 0;
+        }
+
+        .center {
+            display: grid;
+            place-items: center;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            margin: 10px 0;
+        }
+
+        .meta {
+            color: #d1d5db;
+            margin: 4px 0;
+        }
+
+        .qr {
+            width: 125px;
+            height: 125px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="badge">
+        <div class="top">
+            <img class="logo" src="{{LogoSrc}}" alt="Logo" />
+            <div class="small">ID: {{CredentialID}}</div>
+        </div>
+        <div class="center">
+            <div class="small">Presented to</div>
+            <h1>{{FullName}}</h1>
+            <div class="title">{{BadgeLevel}} Badge</div>
+            <div class="meta">For: {{Achievement}}</div>
+            <div class="meta">Issued: {{IssueDate}}</div>
+        </div>
+        <div class="footer">
+            <div>Verify: {{VerificationURL}}</div><img class="qr" src="{{QRCodeDataURL}}" alt="QR" />
+        </div>
+    </div>
+</body>
+
+</html>

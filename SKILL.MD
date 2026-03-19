@@ -20,38 +20,43 @@ All job data lives under `.data/{tenant}/` — the tenant comes from the token.
 
 ---
 
+## Setting Workspace Identity (Issuer Name + Logo)
+
+`{{WorkspaceIssuer}}` and `{{WorkspaceLogo}}` are auto-injected into every rendered credential. Set them once per workspace:
+
+```bash
+credcli workspace                              # show current values
+credcli workspace --issuer "Acme University"   # set issuer name
+credcli workspace --logo ./logo.png            # set logo (PNG/JPG/SVG → embedded base64 data URL)
+credcli workspace --logo ""                    # clear logo
+```
+
+The values are stored in `.data/{tenant}/workspace.json`. They can also be set via the web UI under **Workspace Settings**.
+
+---
+
 ## Full Diploma / Certificate Workflow (100 students)
 
 ```bash
-# 1. Authenticate
+# ── STEP 1: Authenticate ─────────────────────────────────────────────────────
 credcli register https://server.chainletter.io/jwt/abc123
 
-# 2. Discover available templates and their required CSV columns
-credcli templates
+# ── STEP 2: Create credentials ───────────────────────────────────────────────
+credcli templates                          # discover templates and their CSV columns
+credcli new --template 4                   # create job  (template 4 = Diploma)
+credcli csv job001 students.csv            # load recipient CSV
+credcli run job001 --format pdf            # render one PDF per row
+credcli output job001                      # verify output file paths
 
-# 3. Create a job from the desired template (--template N is 1-indexed, matching "credcli templates" output)
-credcli new --template 4           # e.g. template 4 = Diploma
-
-# 4. Load the recipient CSV (columns must exactly match the template's fields)
-credcli csv job001 students.csv
-
-# 5. Render all credentials (one PDF per row)
-credcli run job001 --format pdf
-
-# 6. Check what was generated
-credcli output job001
-
-# 7. Assign a Chainletter collection
-credcli assign job001 <collection-id>
+# ── STEP 3: Upload to Chainletter ────────────────────────────────────────────
+credcli assign job001 <collection-id>      # link job to a collection
 # credcli assign job001 <collection-id> --network public   ← for public IPFS
+credcli send job001                        # upload all PDFs
 
-# 8. Upload all PDFs to Chainletter
-credcli send job001
-
-# 9. Blockchain-stamp the collection
+# ── STEP 4: Blockchain-stamp ─────────────────────────────────────────────────
 credcli stamp job001
 
-# 10. (Optional) Generate personalised .eml files for email delivery
+# ── STEP 5: Generate claim emails ────────────────────────────────────────────
 credcli email job001 --email-template credential-claim-email_600x900.html
 ```
 
@@ -134,6 +139,9 @@ Reading `mailmerge.csv` after `credcli new` gives you the exact column headers r
 |---------|---------|-----------|
 | `credcli register <url>` | Claim Chainletter token | |
 | `credcli register -i` | Show current token info | `-i` |
+| `credcli workspace` | Show issuer name + logo | |
+| `credcli workspace --issuer <name>` | Set issuer name | `--issuer` |
+| `credcli workspace --logo <file>` | Set logo from image file | `--logo` |
 | `credcli templates` | List templates + their fields | |
 | `credcli new --template N` | Create job (non-interactive) | `--template N` (1-indexed) |
 | `credcli list` | List existing jobs + recipient counts | |

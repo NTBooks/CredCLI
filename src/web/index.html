@@ -312,6 +312,17 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .logo-upload-area:hover, .logo-upload-area.drag-over { border-color: var(--navy); background: #f0f2f8; }
 .logo-upload-area input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
 .logo-preview { max-height: 80px; max-width: 240px; border-radius: 6px; display: block; margin: 0 auto 10px; }
+/* ── SMTP settings ───────────────────────────── */
+.smtp-grid { display: grid; grid-template-columns: 1fr 120px 80px; gap: 12px; align-items: end; margin-bottom: 14px; }
+.smtp-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.smtp-field label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.smtp-field input[type=text], .smtp-field input[type=password], .smtp-field input[type=number] { width: 100%; height: 34px; border: 1px solid var(--bdr); border-radius: 7px; padding: 0 10px; font-size: 13px; background: white; color: var(--text); outline: none; box-sizing: border-box; transition: border-color .15s; }
+.smtp-field input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(26,35,126,0.1); }
+.smtp-field .toggle-secure { display: flex; align-items: center; gap: 8px; height: 34px; font-size: 13px; }
+.smtp-test-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.smtp-test-row input { flex: 1; height: 34px; border: 1px solid var(--bdr); border-radius: 7px; padding: 0 10px; font-size: 13px; outline: none; box-sizing: border-box; transition: border-color .15s; }
+.smtp-test-row input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(26,35,126,0.1); }
+.smtp-test-result { font-size: 12px; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -1283,9 +1294,14 @@ async function runJob(jobId, format) {
                   <span style="font-size:11px;color:var(--muted)">${(f.size/1024).toFixed(0)} KB</span>
                 </a>`;
               }).join('');
+              const emlCount = mmFiles.filter(f => f.name.endsWith('.eml')).length;
+              const emlZipBtn = emlCount > 1
+                ? `<button class="btn-outline-cred btn-sm-cred" style="margin-bottom:10px" onclick="downloadFile('/api/jobs/${jobId}/output/mail_merge.zip','emails-${jobId}.zip')"><i class="bi bi-file-zip"></i> Download All EMLs as ZIP (${emlCount} files)</button>`
+                : '';
               mmSec.innerHTML = `
                 <div style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:16px">
                   <div style="font-weight:600;font-size:13px;margin-bottom:10px"><i class="bi bi-send"></i> Mail Merge Files</div>
+                  ${emlZipBtn}
                   <div class="mm-dl-grid">${links}</div>
                 </div>`;
             }
@@ -1378,7 +1394,11 @@ function renderInfoZone(f, dlBtn, delBtn) {
 
 function renderOutputGrid(files, jobId) {
   if (!files.length) return '<p style="font-size:13px;color:var(--muted)">No output files found.</p>';
-  const html = `<div class="output-grid">${files.map(f => {
+  const credFiles = files.filter(f => /\.(pdf|png)$/i.test(f.name));
+  const zipBtn = credFiles.length > 1
+    ? `<div style="margin-bottom:12px"><button class="btn-outline-cred btn-sm-cred" onclick="downloadFile('/api/jobs/${jobId}/output/credentials.zip','credentials-${jobId}.zip')"><i class="bi bi-file-zip"></i> Download All as ZIP (${credFiles.length} files)</button></div>`
+    : '';
+  const html = zipBtn + `<div class="output-grid">${files.map(f => {
     const isPng = f.name.toLowerCase().endsWith('.png');
     const fileUrl = `/api/jobs/${jobId}/output/${encodeURIComponent(f.name)}`;
     const dlBtn = `<button class="btn-outline-cred btn-sm-cred" onclick="downloadFile('${fileUrl}','${f.name}')"><i class="bi bi-download"></i></button>`;
@@ -1484,7 +1504,8 @@ async function loadChainletterSection(jobId, job) {
   const options = groups.map(g => {
     const id = g.id || g.group_id || g.name || g.group_name || String(g);
     const label = g.name || g.group_name || id;
-    return `<option value="${id}">${label}</option>`;
+    const net = g.network || g.visibility || 'private';
+    return `<option value="${id}" data-network="${net}">${label}</option>`;
   }).join('');
 
   el.innerHTML = `
@@ -1506,9 +1527,9 @@ async function loadChainletterSection(jobId, job) {
         <label>${hasGroups ? 'New collection name' : 'Collection name'}</label>
         <input type="text" id="cl-new-name" placeholder="e.g. Spring 2026 Certificates">
       </div>
-      <div class="cl-field">
+      <div class="cl-field" id="cl-network-wrap" style="${hasGroups ? 'display:none' : ''}">
         <label>Network</label>
-        <div style="display:flex;gap:20px;margin-top:6px">
+        <div id="cl-network-radios" style="display:flex;gap:20px;margin-top:6px">
           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px">
             <input type="radio" name="cl-network" value="private" checked>
             <span><strong>Private</strong> — certs sent to users, not publicly indexed</span>
@@ -1518,6 +1539,7 @@ async function loadChainletterSection(jobId, job) {
             <span><strong>Public</strong> — certs visible on the public network</span>
           </label>
         </div>
+        <div id="cl-network-display" style="display:none;margin-top:6px;font-size:13px;color:var(--muted)"></div>
       </div>
       <div>
         <button class="btn-gold" onclick="assignChainletterCollection('${jobId}')">
@@ -1535,10 +1557,13 @@ async function assignChainletterCollection(jobId) {
   errEl.textContent = '';
 
   const selectedVal = select?.value;
-  const collectionId = (selectedVal && selectedVal !== '' && selectedVal !== '__new__') ? selectedVal : newName;
+  const isExisting = selectedVal && selectedVal !== '' && selectedVal !== '__new__';
+  const collectionId = isExisting ? selectedVal : newName;
   if (!collectionId) { errEl.textContent = 'Select an existing collection or enter a new collection name.'; return; }
-  const collectionName = collectionId;
-  const network = document.querySelector('input[name="cl-network"]:checked')?.value ?? 'private';
+  const collectionName = isExisting ? (select.options[select.selectedIndex]?.text ?? collectionId) : collectionId;
+  const network = isExisting
+    ? (select.options[select.selectedIndex]?.dataset?.network ?? 'private')
+    : (document.querySelector('input[name="cl-network"]:checked')?.value ?? 'private');
 
   try {
     const result = await API.patch(`/api/jobs/${jobId}/chainletter`, { collectionId, collectionName, network });
@@ -1582,8 +1607,30 @@ function renderChainletterLocked(el, jobId, collection, job = {}) {
 function onClSelectChange() {
   const sel = document.getElementById('cl-select');
   const newWrap = document.getElementById('cl-new-wrap');
+  const networkWrap = document.getElementById('cl-network-wrap');
+  const networkRadios = document.getElementById('cl-network-radios');
+  const networkDisplay = document.getElementById('cl-network-display');
   if (!newWrap) return;
-  newWrap.style.display = sel?.value === '__new__' ? 'block' : 'none';
+
+  const val = sel?.value;
+  const isNew = val === '__new__';
+  const isExisting = val && val !== '' && val !== '__new__';
+
+  newWrap.style.display = isNew ? 'block' : 'none';
+  networkWrap.style.display = (isNew || isExisting) ? 'block' : 'none';
+
+  if (isExisting) {
+    const opt = sel.options[sel.selectedIndex];
+    const net = opt.dataset.network || 'private';
+    const icon = net === 'public' ? '🌐' : '🔒';
+    const label = net === 'public' ? 'Public network' : 'Private network';
+    networkRadios.style.display = 'none';
+    networkDisplay.style.display = 'block';
+    networkDisplay.innerHTML = `${icon} <strong>${label}</strong> <span style="color:var(--muted)">(set on existing collection)</span>`;
+  } else {
+    networkRadios.style.display = 'flex';
+    networkDisplay.style.display = 'none';
+  }
 }
 window.onClSelectChange = onClSelectChange;
 
@@ -1717,10 +1764,15 @@ async function generateEmailsForJob(jobId) {
           <i class="bi bi-download"></i> ${f.name}
         </button>`)
         .join('');
+      const emlCount = data.files.filter(f => f.name.endsWith('.eml')).length;
+      const emlZipBtn = emlCount > 1
+        ? `<button class="btn-outline-cred btn-sm-cred" onclick="downloadFile('/api/jobs/${jobId}/output/mail_merge.zip','emails-${jobId}.zip')"><i class="bi bi-file-zip"></i> Download All EMLs as ZIP (${emlCount} files)</button>`
+        : '';
       result.innerHTML = `
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
           ${data.files.length} file${data.files.length !== 1 ? 's' : ''} in <code>mail_merge/</code> — includes .eml per recipient, combined .mbox, and manifest CSV:
         </div>
+        ${emlZipBtn ? `<div style="margin-bottom:8px">${emlZipBtn}</div>` : ''}
         <div style="display:flex;flex-wrap:wrap;gap:6px">${links}</div>`;
     }
   } catch(e) {
@@ -1824,6 +1876,7 @@ async function renderSettings() {
   setPage(`<div class="spinner-wrap"><i class="bi bi-arrow-repeat spin"></i> Loading…</div>`);
   const ws = await API.get('/api/workspace');
   _pendingLogo = ws.logo || null;
+  const smtp = ws.smtp || {};
 
   const logoAreaContent = ws.logo
     ? `<img id="logo-preview-img" class="logo-preview" src="${ws.logo}" alt="Logo preview">
@@ -1838,7 +1891,7 @@ async function renderSettings() {
     <p>The logo and issuer name are injected into credentials at render time via <code style="font-size:12px;background:#e8edf8;padding:1px 6px;border-radius:4px;color:var(--navy)">{{WorkspaceLogo}}</code> and <code style="font-size:12px;background:#e8edf8;padding:1px 6px;border-radius:4px;color:var(--navy)">{{WorkspaceIssuer}}</code>.</p>
   </div>
 
-  <div style="max-width:560px">
+  <div style="max-width:600px">
     <div class="section-card">
       <h6><i class="bi bi-building"></i> Issuer Identity</h6>
 
@@ -1868,6 +1921,63 @@ async function renderSettings() {
       <button class="btn-primary-cred" onclick="saveWorkspaceSettings()">
         <i class="bi bi-floppy"></i> Save Settings
       </button>
+    </div>
+
+    <!-- ── SMTP Settings ───────────────────────────────────────────────── -->
+    <div class="section-card" style="margin-top:16px">
+      <h6><i class="bi bi-envelope-at"></i> SMTP / Email Settings</h6>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:18px">Used when sending credential emails directly. Leave blank to skip.</p>
+
+      <div class="smtp-grid">
+        <div class="smtp-field">
+          <label>SMTP Host</label>
+          <input type="text" id="smtp-host" placeholder="smtp.example.com" value="${(smtp.host||'').replace(/"/g,'&quot;')}">
+        </div>
+        <div class="smtp-field">
+          <label>Port</label>
+          <input type="number" id="smtp-port" placeholder="587" value="${smtp.port||587}" min="1" max="65535">
+        </div>
+        <div class="smtp-field">
+          <label>TLS</label>
+          <div class="toggle-secure">
+            <input type="checkbox" id="smtp-secure" style="width:16px;height:16px;cursor:pointer" ${smtp.secure ? 'checked' : ''}>
+            <label for="smtp-secure" style="font-size:12px;font-weight:400;letter-spacing:0;text-transform:none;cursor:pointer">SSL/TLS (port 465)</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="smtp-row2">
+        <div class="smtp-field">
+          <label>Username</label>
+          <input type="text" id="smtp-user" placeholder="user@example.com" value="${(smtp.user||'').replace(/"/g,'&quot;')}">
+        </div>
+        <div class="smtp-field">
+          <label>Password ${smtp.hasPass ? '<span style="color:#22c55e;font-weight:400;text-transform:none;letter-spacing:0">(saved)</span>' : ''}</label>
+          <input type="password" id="smtp-pass" placeholder="${smtp.hasPass ? '••••••••  (leave blank to keep)' : 'Enter password'}">
+        </div>
+      </div>
+
+      <div class="smtp-field" style="margin-bottom:18px">
+        <label>From Address</label>
+        <input type="text" id="smtp-from" placeholder="noreply@example.com" value="${(smtp.fromAddress||'').replace(/"/g,'&quot;')}" style="max-width:320px">
+        <p style="font-size:11px;color:var(--muted);margin-top:4px">Appears as the sender on all outgoing credential emails.</p>
+      </div>
+
+      <div id="smtp-save-err" style="display:none;color:#dc3545;font-size:12px;margin-bottom:10px"></div>
+      <button class="btn-primary-cred" onclick="saveSmtpSettings()">
+        <i class="bi bi-floppy"></i> Save SMTP Settings
+      </button>
+
+      <hr style="border-color:var(--bdr);margin:20px 0 16px">
+
+      <h6 style="margin-bottom:12px"><i class="bi bi-send"></i> Send Test Email</h6>
+      <div class="smtp-test-row">
+        <input type="text" id="smtp-test-to" placeholder="recipient@example.com">
+        <button class="btn-outline-cred btn-sm-cred" onclick="sendSmtpTest()">
+          <i class="bi bi-send"></i> Send Test
+        </button>
+      </div>
+      <div id="smtp-test-result" class="smtp-test-result"></div>
     </div>
   </div>`);
 
@@ -1930,6 +2040,42 @@ async function saveWorkspaceSettings() {
   }
 }
 window.saveWorkspaceSettings = saveWorkspaceSettings;
+
+async function saveSmtpSettings() {
+  const errEl = document.getElementById('smtp-save-err');
+  errEl.style.display = 'none';
+  const issuerName = (document.getElementById('ws-issuer-input')?.value || '').trim();
+  const smtp = {
+    host: (document.getElementById('smtp-host')?.value || '').trim(),
+    port: parseInt(document.getElementById('smtp-port')?.value || '587', 10),
+    secure: document.getElementById('smtp-secure')?.checked || false,
+    user: (document.getElementById('smtp-user')?.value || '').trim(),
+    pass: document.getElementById('smtp-pass')?.value || '',
+    fromAddress: (document.getElementById('smtp-from')?.value || '').trim(),
+  };
+  try {
+    await API.put('/api/workspace', { issuerName, logo: _pendingLogo || '', smtp });
+    toast('SMTP settings saved');
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+window.saveSmtpSettings = saveSmtpSettings;
+
+async function sendSmtpTest() {
+  const to = (document.getElementById('smtp-test-to')?.value || '').trim();
+  const resultEl = document.getElementById('smtp-test-result');
+  if (!to) { resultEl.innerHTML = '<span style="color:#dc3545">Enter a recipient address first.</span>'; return; }
+  resultEl.innerHTML = '<span style="color:var(--muted)"><i class="bi bi-arrow-repeat spin"></i> Sending…</span>';
+  try {
+    await API.post('/api/workspace/smtp/test', { to });
+    resultEl.innerHTML = `<span style="color:#22c55e"><i class="bi bi-check-circle-fill"></i> Test email sent to ${to}</span>`;
+  } catch(e) {
+    resultEl.innerHTML = `<span style="color:#dc3545"><i class="bi bi-x-circle-fill"></i> ${e.message}</span>`;
+  }
+}
+window.sendSmtpTest = sendSmtpTest;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.getElementById('btn-connect').addEventListener('click', doConnect);
