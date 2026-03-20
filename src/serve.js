@@ -313,7 +313,10 @@ function getSessionsPath() {
   return path.join(getDataDir(), 'sessions.json');
 }
 
+const HOSTED = process.env.HOSTED === 'true';
+
 function loadSessions() {
+  if (HOSTED) return; // hosted mode: sessions are in-memory only, never read from disk
   try {
     const data = fs.readJsonSync(getSessionsPath());
     const now = Date.now();
@@ -326,6 +329,7 @@ function loadSessions() {
 }
 
 function persistSessions() {
+  if (HOSTED) return; // hosted mode: sessions are in-memory only, never written to disk
   try {
     const obj = {};
     for (const [token, session] of activeSessions) obj[token] = session;
@@ -335,7 +339,14 @@ function persistSessions() {
 }
 
 function auth(req, res, next) {
-  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  let token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  // Fallback: read token from cookie (used by iframes which can't send headers)
+  if (!token && req.headers.cookie) {
+    const match = req.headers.cookie.match(/credcli_session=([^;]+)/);
+    if (match) {
+      try { token = JSON.parse(decodeURIComponent(match[1])).token || ''; } catch { /* ignore */ }
+    }
+  }
   const session = token && activeSessions.get(token);
   if (session) {
     req.chainSession = session;

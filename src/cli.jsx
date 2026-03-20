@@ -199,7 +199,7 @@ function MainMenu({ tokenInfo, onLogout }) {
 if (fileURLToPath(import.meta.url).includes('_npx')) {
   console.warn(
     '\n⚠  Running via npx (ephemeral). Playwright will re-download Chromium (~130 MB) on every run.' +
-    '\n   For fast repeated use: pnpm add -g credcli\n'
+    '\n   For fast repeated use: pnpm add -g @credcli/cli\n'
   );
 }
 

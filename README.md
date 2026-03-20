@@ -1,165 +1,82 @@
-# CredCLI
+# @credcli/cli
 
-A mail-merge credential and certificate generator. Fills HTML templates with data from CSV files and renders them as HTML or PNG via Playwright.
+Mail-merge credential & certificate generator — PDF/PNG output via Playwright, blockchain-stamped via Chainletter.
 
-## Requirements
-
-- Node.js >= 18
-- pnpm (or npm)
-
-## Installation
+## Install
 
 ```bash
-pnpm install
-pnpm run build
+npm install -g @credcli/cli
 ```
 
-To use globally:
+Or run without installing:
 
 ```bash
-npm link
+npx @credcli/cli <command>
+```
+
+> First run downloads Chromium (~130 MB) for headless rendering.
+
+## Quick start
+
+```bash
+# Claim your Chainletter workspace token
+credcli register https://chain.lt/abc123
+
+# Set your organization name and logo
+credcli workspace --issuer "Acme University" --logo logo.png
+
+# Create a job and load recipients
+credcli new --template 3
+credcli csv job001 recipients.csv
+
+# Render PDFs
+credcli run job001 --format pdf
+
+# Upload, stamp on-chain, generate emails
+credcli assign job001 spring-2026
+credcli send job001 --yes
+credcli stamp job001
+credcli email job001
 ```
 
 ## Commands
 
-### `list`
-
-List all available HTML templates in the `templates/` directory.
-
-```bash
-credcli list
-```
-
-### `generate`
-
-Generate a single credential from a template with inline flag values.
-
-```bash
-credcli generate --template Diploma-1200x900.html --out output/diploma.html \
-  --FullName "Jane Smith" --Title "Bachelor of Science" \
-  --Institution "State University" --IssueDate "2024-05-15"
-```
-
-Add `--format png` to render a PNG screenshot via Playwright:
-
-```bash
-credcli generate --template Diploma-1200x900.html --format png \
-  --FullName "Jane Smith"
-```
-
-### `generate-csv`
-
-Bulk-generate credentials from a CSV file (one output per row).
-
-```bash
-credcli generate-csv --template Diploma-1200x900.html --csv students.csv --out output/
-```
-
-Use `--filter` to process only matching rows:
-
-```bash
-credcli generate-csv --template Diploma-1200x900.html --csv students.csv \
-  --filter "Major=Computer Science"
-```
-
-Use regex filters with `/pattern/`:
-
-```bash
-credcli generate-csv --template Diploma-1200x900.html --csv students.csv \
-  --filter "GPA=/^3\.[5-9]/"
-```
-
-### `newjob`
-
-Create a new job CSV file interactively, or with flags:
-
-```bash
-# Interactive
-credcli newjob
-
-# With flags
-credcli newjob --job jobs/batch1.csv --template Diploma-1200x900.html \
-  --headers "FName,LName,FullName,Title,Institution,IssueDate"
-```
-
-### `runjob`
-
-Run a job CSV file (a structured batch file with a template header row):
-
-```bash
-credcli runjob --file jobs/batch1.csv --out output/
-credcli runjob --file jobs/batch1.csv --out output/ --format png
-```
-
-**Job CSV format:**
-
-```
-templateId,Diploma-1200x900.html
-FName,LName,FullName,Title,Institution,IssueDate
-Jane,Smith,Jane Smith,Bachelor of Science,State University,2024-05-15
-```
-
-### `render`
-
-Render an existing HTML file to PNG using Playwright:
-
-```bash
-credcli render --file output/diploma.html --out output/diploma.png
-credcli render --file output/diploma.html --out output/diploma.png --width 1200 --height 900
-```
-
-### `placeholders`
-
-List all supported template placeholders:
-
-```bash
-credcli placeholders
-```
-
-## Template Placeholders
-
-Templates use `{{ PlaceholderName }}` syntax. Supported placeholders:
-
-| Placeholder | Description |
+| Command | Description |
 |---|---|
-| `FName` | First name |
-| `LName` | Last name |
-| `FullName` | Full name |
-| `Title` | Degree or credential title |
-| `CredentialID` | Unique credential identifier |
-| `Institution` | Issuing institution |
-| `Issuer` | Issuer name |
-| `IssueDate` | Date of issue |
-| `ExpirationDate` | Expiration date |
-| `CourseName` | Course name |
-| `GPA` | GPA |
-| `Major` | Field of study |
-| `Hours` | Credit hours |
-| `Level` | Level (e.g. Undergraduate) |
-| `Description` | Custom description |
-| `BadgeLevel` | Badge level |
-| `Achievement` | Achievement label |
-| `QRUrl` | URL encoded in QR code |
-| `QRCodeDataURL` | Auto-generated QR code image (data URL) |
-| `VerificationURL` | Credential verification URL |
-| `LogoSrc` | Logo image source (data URL or path) |
-| `Signature` | Signature name or image |
-| `Location` | Location |
-| `Notes` | Additional notes |
+| `register <url>` | Claim a Chainletter token from a shortlink. Use `-i` to inspect the current token. |
+| `workspace` | Set issuer name (`--issuer`) and logo (`--logo`) |
+| `new` | Create a credential job and pick a template |
+| `templates` | List available templates with dimensions and CSV fields |
+| `csv <job> <file>` | Load a recipient CSV into a job |
+| `run [job]` | Render credentials via headless Chromium (`--format pdf\|png`) |
+| `list` | Show all jobs with template, recipient count, and output count |
+| `output <job>` | List generated files for a job |
+| `assign <job> <id>` | Link a job to a Chainletter collection (`--network private\|public`) |
+| `send <job>` | Upload credentials to Chainletter and store claim links |
+| `stamp <job>` | Blockchain-stamp the collection (immutable) |
+| `email <job>` | Generate .eml files, MBOX archive, and manifest CSV |
+| `serve` | Start the web UI at `localhost:3037` |
+| `help` | Show usage. `-c` writes CLAUDE.md; `-s` writes SKILL.md |
 
-Unrecognized placeholders are replaced with an empty string.
+## Built-in templates
 
-## Included Templates
+- Badge (800×800)
+- Certificate of Achievement (1200×900)
+- Course Completion (1200×900)
+- Diploma (1200×900)
+- Transcript (1200×1600, 12 course rows)
+- Email template (600×900)
 
-- `Badge-800x800.html` — Square badge
-- `CertificateOfAchievement-1200x900.html` — Certificate of achievement
-- `CourseCompletionCertificate-1200x900.html` — Course completion certificate
-- `Diploma-1200x900.html` — Academic diploma
-- `Transcript-1200x900.html` — Academic transcript
+Custom HTML templates are supported — any `{{Placeholder}}` in your HTML becomes a CSV column.
 
-## Logo
+## CSV fields
 
-Place a `logo.png` file in the `user_files/` directory to embed your own logo in generated credentials. If absent, a placeholder logo is used.
+`FullName` `FName` `LName` `Email` `Title` `Achievement` `BadgeLevel` `CredentialID` `Institution` `Issuer` `Signature` `Location` `IssueDate` `ExpirationDate` `CourseName` `Major` `GPA` `Hours` `QRUrl` `VerificationURL` + `Course1–12 Name/Grade/Credits/Semester`
+
+## Requirements
+
+- Node.js >= 18
+- A [Chainletter](https://credcli.com) account for blockchain stamping and credential hosting
 
 ## License
 

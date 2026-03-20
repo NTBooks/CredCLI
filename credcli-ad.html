@@ -489,6 +489,10 @@
       CredCLI turns HTML templates and a CSV spreadsheet into signed PDFs, verifiable badges,
       email bundles, and blockchain-stamped credentials — in seconds, from your terminal or browser.
     </p>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 20px;display:inline-block;margin-bottom:24px;color:rgba(255,255,255,0.75);">
+      <span style="color:rgba(255,255,255,0.3);user-select:none;">$ </span>npm install -g @credcli/cli
+    </div>
+    <br>
     <a class="hero-cta" href="#">Get started</a>
     <a class="hero-cta-ghost" href="#">View docs</a>
   </section>
@@ -505,29 +509,29 @@
       </div>
       <div class="terminal-body">
         <div><span class="tcmt"># One-time setup: claim your workspace token</span></div>
-        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">register</span> <span class="tval">https://chain.lt/abc123</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">credcli</span> <span class="targ">register</span> <span class="tval">https://chain.lt/abc123</span></div>
         <div><span class="tok">✓ Token saved · tenant: acme.chainletter.io</span></div>
         <br>
         <div><span class="tcmt"># Brand your workspace</span></div>
-        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">workspace</span> <span class="tflag">--issuer</span> <span class="tval">"Acme University"</span> <span class="tflag">--logo</span> <span class="tval">logo.png</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">credcli</span> <span class="targ">workspace</span> <span class="tflag">--issuer</span> <span class="tval">"Acme University"</span> <span class="tflag">--logo</span> <span class="tval">logo.png</span></div>
         <br>
         <div><span class="tcmt"># Create a new credential job, load recipients</span></div>
-        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">new</span> <span class="tflag">--template</span> <span class="tval">3</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">credcli</span> <span class="targ">new</span> <span class="tflag">--template</span> <span class="tval">3</span></div>
         <div><span class="tok">✓ Created job001 · CourseCompletionCertificate · 0 recipients</span></div>
-        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">csv</span> <span class="tval">job001 recipients.csv</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">credcli</span> <span class="targ">csv</span> <span class="tval">job001 recipients.csv</span></div>
         <div><span class="tok">✓ Loaded 47 recipients into job001</span></div>
         <br>
         <div><span class="tcmt"># Render 47 PDFs via headless Chromium</span></div>
-        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">run</span> <span class="tval">job001</span> <span class="tflag">--format</span> <span class="tval">pdf</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">credcli</span> <span class="targ">run</span> <span class="tval">job001</span> <span class="tflag">--format</span> <span class="tval">pdf</span></div>
         <div><span class="tout">  Rendering [████████████████████] 47/47 · credential_047.pdf</span></div>
         <br>
         <div><span class="tcmt"># Assign to Chainletter, stamp on-chain, generate emails</span></div>
-        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">assign</span> <span class="tval">job001 spring-2026</span></div>
-        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">send</span> <span class="tval">job001</span> <span class="tflag">--yes</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">credcli</span> <span class="targ">assign</span> <span class="tval">job001 spring-2026</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">credcli</span> <span class="targ">send</span> <span class="tval">job001</span> <span class="tflag">--yes</span></div>
         <div><span class="tok">✓ 47 files uploaded · claim links stored</span></div>
-        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">stamp</span> <span class="tval">job001</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">credcli</span> <span class="targ">stamp</span> <span class="tval">job001</span></div>
         <div><span class="tok">✓ Collection stamped · blockchain record immutable</span></div>
-        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">email</span> <span class="tval">job001</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">credcli</span> <span class="targ">email</span> <span class="tval">job001</span></div>
         <div><span class="tok">✓ 47 .eml files · all_recipients.mbox · manifest.csv</span></div>
       </div>
     </div>
@@ -602,7 +606,7 @@
     <!-- COMMANDS -->
     <section class="section">
       <div class="section-label">Command reference</div>
-      <div class="section-title">Everything available via <code style="font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--navy);background:var(--tint);padding:4px 12px;border-radius:8px;border:1px solid var(--bdr2);">dsx credcli</code></div>
+      <div class="section-title">Everything available via <code style="font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--navy);background:var(--tint);padding:4px 12px;border-radius:8px;border:1px solid var(--bdr2);">credcli</code></div>
       <div class="cmd-grid">
 
         <div class="cmd-card">
@@ -751,7 +755,7 @@
         <div class="feature">
           <div class="feature-icon" style="background:#e0f2f1;">🖥️</div>
           <h3>Web UI</h3>
-          <p>Run <code>dsx credcli serve</code> for a browser-based editor with live preview — no terminal required.</p>
+          <p>Run <code>credcli serve</code> for a browser-based editor with live preview — no terminal required.</p>
         </div>
       </div>
     </section>
@@ -832,10 +836,10 @@
 
     <!-- FOOTER -->
     <footer class="footer">
-      <p><strong>dsx credcli</strong> &nbsp;·&nbsp; Issue credentials at scale &nbsp;·&nbsp; Powered by Chainletter</p>
+      <p><strong>credcli</strong> &nbsp;·&nbsp; Issue credentials at scale &nbsp;·&nbsp; Powered by Chainletter</p>
       <p style="margin-top:10px;font-size:12px;">
-        Run <code>dsx credcli help</code> to get started &nbsp;·&nbsp;
-        <code>dsx credcli serve</code> to open the web UI
+        Run <code>credcli help</code> to get started &nbsp;·&nbsp;
+        <code>credcli serve</code> to open the web UI
       </p>
     </footer>
 
