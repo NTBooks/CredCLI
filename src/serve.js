@@ -2,6 +2,9 @@ import express from 'express';
 import archiver from 'archiver';
 import nodemailer from 'nodemailer';
 
+// Fields that are auto-injected at render time — never needed as CSV columns.
+const AUTO_INJECTED_FIELDS = new Set(['WorkspaceIssuer', 'WorkspaceLogo', 'VerificationURL', 'QRUrl', 'QR_CODE_IMAGE']);
+
 // ── Master placeholder list ───────────────────────────────────────────────────
 // Every field the renderer understands. New blank templates show all of these.
 export const ALL_FIELDS = [
@@ -15,8 +18,7 @@ export const ALL_FIELDS = [
   'IssueDate', 'ExpirationDate',
   // Academic
   'CourseName', 'Major', 'GPA', 'Hours',
-  // Verification
-  'QRUrl', 'VerificationURL',
+  // Verification (QRUrl and VerificationURL are set post-Chainletter stamp — not CSV fields)
   // Misc
   'Notes',
   // Workspace-level identity (auto-injected from workspace.json at render time)
@@ -106,16 +108,6 @@ function generateBlankTemplate(name, width, height) {
   }
   .course-table td { padding: 7px 12px; border-bottom: 1px solid #eee; color: #555; }
   .course-row:empty { display: none; }
-  /* ── Bottom bar ──────────────────────── */
-  .bottom-bar {
-    margin-top: auto; padding-top: 20px;
-    border-top: 1px solid #e0e4f0;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 24px;
-  }
-  .qr-block { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .qr-block img { width: 80px; height: 80px; }
-  .qr-label { font-size: 9px; color: #aaa; letter-spacing: 1px; text-transform: uppercase; }
   .hint {
     background: #fffbeb; border: 1px solid #fcd34d;
     border-radius: 6px; padding: 10px 14px;
@@ -133,7 +125,6 @@ function generateBlankTemplate(name, width, height) {
     Use <code>{{PLACEHOLDER_NAME}}</code> anywhere in the HTML to inject that field — including
     <strong>custom ones you invent</strong> (e.g. <code>{{StudentID}}</code>, <code>{{Department}}</code>).
     Every <code>{{TOKEN}}</code> you use is automatically added to the CSV when you save.
-    <code>{{QR_CODE_IMAGE}}</code> is replaced with a QR code image at render time.
     <code>{{WorkspaceLogo}}</code> and <code>{{WorkspaceIssuer}}</code> are auto-filled from your workspace settings.
   </div>
 
@@ -271,17 +262,6 @@ function generateBlankTemplate(name, width, height) {
     </table>
   </div>
 
-  <!-- ── Bottom bar: QR + verification ──────────────── -->
-  <div class="bottom-bar">
-    <div>
-      <div class="field-label" style="margin-bottom:4px">Verification URL</div>
-      <div class="field-value mono">{{VerificationURL}}</div>
-    </div>
-    <div class="qr-block">
-      <img src="{{QR_CODE_IMAGE}}" alt="QR Code">
-      <div class="qr-label">Scan to verify · {{QRUrl}}</div>
-    </div>
-  </div>
 
 </div>
 </body>
@@ -586,7 +566,7 @@ export async function startServer(port = 3037) {
     const tmpl = templates.find(t => t.file === req.body.template);
     if (!tmpl) return res.status(400).json({ error: 'Template not found' });
     const { jobId, jobDir } = await createJob(tmpl);
-    generateEmptyCSV(tmpl.fields, path.join(jobDir, 'mailmerge.csv'));
+    generateEmptyCSV(tmpl.fields.filter(f => !AUTO_INJECTED_FIELDS.has(f)), path.join(jobDir, 'mailmerge.csv'));
     res.json({ jobId, jobDir });
   });
 
@@ -619,9 +599,9 @@ export async function startServer(port = 3037) {
     const job = listJobs().find(j => j.jobId === req.params.id);
     if (!job) return res.status(404).json({ error: 'Not found' });
     if (!fs.existsSync(job.csvPath)) {
-      generateEmptyCSV(job.fields || [], job.csvPath);
+      generateEmptyCSV((job.fields || []).filter(f => !AUTO_INJECTED_FIELDS.has(f)), job.csvPath);
     }
-    res.download(job.csvPath, 'mailmerge.csv');
+    res.download(job.csvPath, 'mailmerge.csv', { dotfiles: 'allow' });
   });
 
   // Upload a filled mailmerge CSV
