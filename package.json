@@ -33,6 +33,7 @@
     "meow": "^14.1.0",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.3",
+    "open": "^11.0.0",
     "playwright": "^1.58.2",
     "qrcode": "^1.5.4",
     "react": "^19.2.4",

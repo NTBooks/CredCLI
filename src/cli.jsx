@@ -7,7 +7,7 @@ import NewJob from './commands/NewJob.jsx';
 import RunJob from './commands/RunJob.jsx';
 import ListJobs from './commands/ListJobs.jsx';
 import { BANNER } from './banner.js';
-import { initTenantWorkspace, getTokenPath } from './utils/jobs.js';
+import { initTenantWorkspace, getTokenPath, listJobs, getJobsDir } from './utils/jobs.js';
 
 const cli = meow(`
   Usage
@@ -28,6 +28,8 @@ const cli = meow(`
     new                          Create a new job (interactive)
     new --template N             Create a new job from template N (non-interactive)
     run [job]                    Render credentials for a job
+    preview <job>                Render row 1 (or --row N) and open the output file
+    delete <job>                 Delete a job folder (requires --yes)
     list                         List all jobs
     csv <job> <file>             Set the recipient CSV for a job
     output <job>                 List output files for a job (with full paths)
@@ -41,6 +43,8 @@ const cli = meow(`
   Options
     --template,        -t  Template number or name (for "new")
     --format,          -f  Output format: pdf (default) or png (for "run")
+    --limit,           -l  Render only the first N rows (for "run"), useful for testing
+    --resume               Skip rows whose output file already exists (for "run")
     --port,            -p  Port for the web server (default: 3037)
     --info,            -i  Show current token info (for "register")
     --issuer               Issuer / organisation name (for "workspace")
@@ -71,7 +75,7 @@ const cli = meow(`
 
   Full end-to-end workflow (no browser required):
 
-    credcli register <url>          → saves token.json in current directory
+    credcli register <url>          → saves token.json in .data/
     credcli workspace               → show current issuer name and logo
     credcli workspace --issuer "Acme University"  → set issuer name
     credcli workspace --logo ./logo.png           → set logo (embedded as base64)
@@ -88,7 +92,7 @@ const cli = meow(`
 
   File locations (CLI and serve mode share the same layout):
 
-    ./token.json                              Chainletter credentials (created by "register")
+    ./.data/token.json                        Chainletter credentials (created by "register")
     ./.data/{tenant}/jobs/job001/job.json     Job metadata: template name, fields, dimensions
     ./.data/{tenant}/jobs/job001/mailmerge.csv  Recipient data — one row per credential
     ./.data/{tenant}/jobs/job001/template.html  HTML template (auto-copied when job is created)
@@ -129,6 +133,9 @@ const cli = meow(`
   flags: {
     template: { type: 'string',  shortFlag: 't' },
     format:   { type: 'string',  shortFlag: 'f', default: 'pdf' },
+    limit:    { type: 'number',  shortFlag: 'l', default: 0 },
+    resume:   { type: 'boolean', default: false },
+    row:      { type: 'number',  default: 1 },
     port:     { type: 'string',  shortFlag: 'p', default: '3037' },
     info:     { type: 'boolean', shortFlag: 'i', default: false },
     network:       { type: 'string',  shortFlag: 'n', default: 'private' },
@@ -137,6 +144,9 @@ const cli = meow(`
     skill:         { type: 'boolean', shortFlag: 's', default: false },
     issuer: { type: 'string' },
     logo:   { type: 'string' },
+    yes:    { type: 'boolean', shortFlag: 'y', default: false },
+    no:     { type: 'boolean', default: false },
+    open:   { type: 'boolean', default: true },
   },
 });
 
@@ -163,7 +173,7 @@ function MainMenu({ tokenInfo, onLogout }) {
   }
 
   if (view === 'new')  return <NewJob />;
-  if (view === 'run')  return <RunJob format={cli.flags.format} />;
+  if (view === 'run')  return <RunJob format={cli.flags.format} limit={cli.flags.limit} resume={cli.flags.resume} />;
   if (view === 'list') return <ListJobs />;
 
   return (
@@ -222,6 +232,10 @@ if (command === 'serve' || !command) {
     console.log(`   URL:       http://localhost:${p}`);
     console.log(`   Login:     Paste a Chainletter token URL in the browser`);
     console.log(`\n   Press Ctrl+C to stop.\n`);
+    if (cli.flags.open) {
+      const { default: openBrowser } = await import('open');
+      openBrowser(`http://localhost:${p}`).catch(() => {});
+    }
 
     // Keep the process alive — necessary when running as a linked/global command
     // (VS Code auto-attach or other debuggers can drain the event loop instead)
@@ -238,11 +252,28 @@ if (command === 'serve' || !command) {
       app = <NewJob preselect={cli.flags.template} />;
       break;
     case 'run':
-      app = <RunJob preselect={jobArg} format={cli.flags.format} />;
+      app = <RunJob preselect={jobArg} format={cli.flags.format} limit={cli.flags.limit} resume={cli.flags.resume} />;
       break;
-    case 'list':
-      app = <ListJobs />;
-      break;
+    case 'list': {
+      const jobs = listJobs();
+      const jobsDir = getJobsDir();
+      if (jobs.length === 0) {
+        console.log(`\nNo jobs found in ${jobsDir}`);
+        console.log('Run "credcli new" to create your first job.\n');
+      } else {
+        console.log(`\nJobs in ${jobsDir}:`);
+        for (let i = 0; i < jobs.length; i++) {
+          const j = jobs[i];
+          const num = String(i + 1).padStart(2, ' ');
+          const recipients = j.recipientCount > 0
+            ? `${j.recipientCount} recipient${j.recipientCount !== 1 ? 's' : ''}`
+            : 'empty — fill in mailmerge.csv';
+          console.log(`  ${num}. ${j.jobId}  ${j.templateName ?? 'unknown'}  ${recipients}`);
+        }
+        console.log('');
+      }
+      process.exit(0);
+    }
     case 'workspace': {
       const { default: WorkspaceSettings } = await import('./commands/WorkspaceSettings.jsx');
       const hasFlags = cli.flags.issuer !== undefined || cli.flags.logo !== undefined;
@@ -280,7 +311,7 @@ if (command === 'serve' || !command) {
     }
     case 'send': {
       const { default: SendToChainletter } = await import('./commands/SendToChainletter.jsx');
-      app = <SendToChainletter jobArg={cli.input[1]} />;
+      app = <SendToChainletter jobArg={cli.input[1]} yes={cli.flags.yes} no={cli.flags.no} />;
       break;
     }
     case 'stamp': {
@@ -290,7 +321,17 @@ if (command === 'serve' || !command) {
     }
     case 'email': {
       const { default: EmailJob } = await import('./commands/EmailJob.jsx');
-      app = <EmailJob jobArg={cli.input[1]} emailTemplate={cli.flags.emailTemplate} />;
+      app = <EmailJob jobArg={cli.input[1]} emailTemplate={cli.flags.emailTemplate} yes={cli.flags.yes} />;
+      break;
+    }
+    case 'preview': {
+      const { default: PreviewJob } = await import('./commands/PreviewJob.jsx');
+      app = <PreviewJob jobArg={cli.input[1]} row={cli.flags.row} format={cli.flags.format} />;
+      break;
+    }
+    case 'delete': {
+      const { default: DeleteJob } = await import('./commands/DeleteJob.jsx');
+      app = <DeleteJob jobArg={cli.input[1]} yes={cli.flags.yes} />;
       break;
     }
     case 'help': {
@@ -307,6 +348,7 @@ if (command === 'serve' || !command) {
   render(
     <Box flexDirection="column">
       {app}
-    </Box>
+    </Box>,
+    { patchConsole: false }
   );
 }

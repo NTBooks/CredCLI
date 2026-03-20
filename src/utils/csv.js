@@ -25,7 +25,8 @@ export function generateEmptyCSV(fields, filePath) {
 export function applyReplacements(html, row) {
   let result = html;
   for (const [key, value] of Object.entries(row)) {
-    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g');
     result = result.replace(regex, value ?? '');
   }
   return result;

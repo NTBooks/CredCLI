@@ -5,7 +5,8 @@
       "Bash(node dist/cli.mjs list)",
       "Bash(node dist/cli.mjs new --template 1)",
       "Bash(pnpm add:*)",
-      "Bash(node scripts/build.mjs)"
+      "Bash(node scripts/build.mjs)",
+      "Bash(ls -la /e/git_repos/CredCLI/src/commands/*.jsx)"
     ]
   }
 }

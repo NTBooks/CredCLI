@@ -6,7 +6,7 @@ import { listJobs, getJobsDir } from '../utils/jobs.js';
 import { renderJob } from '../utils/renderer.js';
 import path from 'path';
 
-export default function RunJob({ preselect, format = 'pdf' }) {
+export default function RunJob({ preselect, format = 'pdf', limit = 0, resume = false }) {
   const { exit } = useApp();
   const jobs = listJobs();
   const [phase, setPhase] = useState(preselect != null ? 'running' : 'select');
@@ -24,7 +24,9 @@ export default function RunJob({ preselect, format = 'pdf' }) {
       const res = await renderJob(
         job.jobDir,
         format,
-        (done, total, latest) => setProgress({ done, total, latest })
+        (done, total, latest) => setProgress({ done, total, latest }),
+        null,
+        { limit, resume }
       );
       setResults(res);
       setPhase('done');
@@ -44,7 +46,7 @@ export default function RunJob({ preselect, format = 'pdf' }) {
       return;
     }
     if (job.recipientCount === 0) {
-      setError(`Job ${job.jobId} has no recipients. Fill in ${path.join(job.jobDir, 'mailmerge.csv')} first.`);
+      setError(`Job ${job.jobId} has no recipients.\n  Edit directly: ${path.join(job.jobDir, 'mailmerge.csv')}\n  Or run: credcli csv ${job.jobId} <your-data.csv>`);
       return;
     }
     doRun(job);
@@ -101,15 +103,25 @@ export default function RunJob({ preselect, format = 'pdf' }) {
 
   if (phase === 'done') {
     const outputDir = path.join(selectedJob.jobDir, 'output');
+    const qrWarnings = results.filter(r => r.qrWarned);
+    const skipped = results.filter(r => r.skipped).length;
+    const generated = results.length - skipped;
     setTimeout(() => exit(), 50);
     return (
       <Box flexDirection="column" marginY={1}>
-        <Text color="green" bold>✔ Done! {results.length} credential{results.length !== 1 ? 's' : ''} generated</Text>
+        <Text color="green" bold>✔ Done! {generated} credential{generated !== 1 ? 's' : ''} generated{skipped > 0 ? `, ${skipped} skipped (already exist)` : ''}</Text>
         <Box marginTop={1} flexDirection="column">
           {results.map(r => (
             <Text key={r.file} color="gray">  ✔ {r.file}</Text>
           ))}
         </Box>
+        {qrWarnings.length > 0 && (
+          <Box flexDirection="column" marginTop={1}>
+            <Text color="yellow">⚠  QR code generation failed for {qrWarnings.length} credential{qrWarnings.length !== 1 ? 's' : ''} — QR field will be blank:</Text>
+            {qrWarnings.map(r => <Text key={r.file} color="yellow">   • {r.file}</Text>)}
+            <Text color="gray">   Check that the QRUrl or VerificationURL column in your CSV contains valid URLs.</Text>
+          </Box>
+        )}
         <Box marginTop={1}>
           <Text>Output folder: <Text color="cyan">{outputDir}</Text></Text>
         </Box>

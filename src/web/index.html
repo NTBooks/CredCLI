@@ -1140,16 +1140,6 @@ async function renderJobDetail(jobId) {
   <!-- Run log -->
   <div class="section-card" id="run-section" style="${job.recipientCount===0?'opacity:0.5':''}">
     <h6><i class="bi bi-play-circle"></i> Run Log</h6>
-    ${job.templateType !== 'email' && emailTemplates.length > 0 ? `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-      <label for="email-tmpl-select" style="font-size:13px;font-weight:600;color:var(--navy);white-space:nowrap">
-        <i class="bi bi-envelope"></i> Email per credential:
-      </label>
-      <select id="email-tmpl-select" style="font-size:13px;padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#1a1a2e;min-width:200px;">
-        <option value="">None</option>
-        ${emailTemplates.map(t => `<option value="${t.file}">${t.name}</option>`).join('')}
-      </select>
-    </div>` : ''}
     <div id="run-log" class="progress-log" style="min-height:60px">
       <span style="opacity:0.4">Waiting for run…</span>
     </div>
@@ -1158,7 +1148,6 @@ async function renderJobDetail(jobId) {
         <div class="progress-bar" id="run-progress-bar" style="background:var(--navy);width:0%;border-radius:3px;transition:width .3s"></div>
       </div>
     </div>
-    <div id="mail-merge-section"></div>
   </div>
 
   <!-- Output -->
@@ -1177,12 +1166,20 @@ async function renderJobDetail(jobId) {
   <div class="section-card">
     <h6 style="margin-bottom:14px"><span class="stage-num">4</span> Stamp Collection</h6>
     <div id="stamp-section"><span style="font-size:13px;color:var(--muted)">Loading…</span></div>
+  </div>
+
+  <!-- Generate Claim Emails -->
+  <div class="section-card">
+    <h6 style="margin-bottom:14px"><span class="stage-num">5</span> Generate Claim Emails</h6>
+    <div id="email-section"><span style="font-size:13px;color:var(--muted)">Complete Stage 3 first — send your credentials to Chainletter to enable email generation.</span></div>
   </div>`);
 
   // Load Chainletter section
   loadChainletterSection(jobId, job);
   // Load Stamp section
   loadStampSection(jobId, job);
+  // Load email section (if already sent)
+  if (job.chainletterSent) loadEmailSection(jobId);
 
   // Drag-over highlight
   const dz = document.getElementById(`drop-zone-${jobId}`);
@@ -1238,13 +1235,9 @@ async function runJob(jobId, format) {
     log.scrollTop = log.scrollHeight;
   };
 
-  const emailTemplate = document.getElementById('email-tmpl-select')?.value || '';
-  const emailSuffix  = emailTemplate ? `&emailTemplate=${encodeURIComponent(emailTemplate)}` : '';
-
   append(`Starting ${format.toUpperCase()} render…`);
-  if (emailTemplate) append(`  + generating .eml files (${emailTemplate})`);
 
-  const es = new EventSource(`/api/jobs/${jobId}/run?format=${format}${emailSuffix}`, {
+  const es = new EventSource(`/api/jobs/${jobId}/run?format=${format}`, {
     headers: { Authorization: `Bearer ${S.token}` },
   });
 
@@ -1252,7 +1245,7 @@ async function runJob(jobId, format) {
   es.close();
 
   // Use fetch + ReadableStream for SSE with auth header
-  const resp = await fetch(`/api/jobs/${jobId}/run?format=${format}${emailSuffix}`, {
+  const resp = await fetch(`/api/jobs/${jobId}/run?format=${format}`, {
     headers: { Authorization: `Bearer ${S.token}` },
   });
   const reader = resp.body.getReader();
@@ -1273,43 +1266,9 @@ async function runJob(jobId, format) {
         if (msg.type === 'progress') {
           append(`  ✔ ${msg.latest?.file || '…'}`, 'ok');
           if (msg.total > 0) progressBar.style.width = `${Math.round(msg.done/msg.total*100)}%`;
-        } else if (msg.type === 'mail_merge_file') {
-          append(`  📎 ${msg.file}`, 'ok');
-        } else if (msg.type === 'mail_merge_done') {
-          append(`\nMail merge folder ready — ${msg.count} email(s) with attachments.`, 'ok');
-          append(`  + all_recipients.mbox`, 'ok');
-          append(`  + mail_merge_manifest.csv`, 'ok');
-          progressBar.style.width = '100%';
-          // Render mail_merge download section
-          setTimeout(async () => {
-            const mmFiles = await API.get(`/api/jobs/${jobId}/output/mail_merge`).catch(() => []);
-            const mmSec = document.getElementById('mail-merge-section');
-            if (mmSec && mmFiles.length) {
-              const links = mmFiles.map(f => {
-                const icon = f.name.endsWith('.eml') ? 'bi-envelope-arrow-down'
-                           : f.name.endsWith('.mbox') ? 'bi-archive'
-                           : 'bi-filetype-csv';
-                return `<a href="/api/jobs/${jobId}/output/mail_merge/${encodeURIComponent(f.name)}" class="mm-dl-link" download>
-                  <i class="bi ${icon}"></i> ${f.name}
-                  <span style="font-size:11px;color:var(--muted)">${(f.size/1024).toFixed(0)} KB</span>
-                </a>`;
-              }).join('');
-              const emlCount = mmFiles.filter(f => f.name.endsWith('.eml')).length;
-              const emlZipBtn = emlCount > 1
-                ? `<button class="btn-outline-cred btn-sm-cred" style="margin-bottom:10px" onclick="downloadFile('/api/jobs/${jobId}/output/mail_merge.zip','emails-${jobId}.zip')"><i class="bi bi-file-zip"></i> Download All EMLs as ZIP (${emlCount} files)</button>`
-                : '';
-              mmSec.innerHTML = `
-                <div style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:16px">
-                  <div style="font-weight:600;font-size:13px;margin-bottom:10px"><i class="bi bi-send"></i> Mail Merge Files</div>
-                  ${emlZipBtn}
-                  <div class="mm-dl-grid">${links}</div>
-                </div>`;
-            }
-          }, 300);
         } else if (msg.type === 'done') {
           const isEmail = format === 'email';
           append(`\nDone! ${msg.results.length} ${isEmail ? 'email(s)' : 'credential(s)'} generated.`, 'ok');
-          if (emailTemplate) append(`  .eml files generated alongside each credential.`, 'ok');
           progressBar.style.width = '100%';
           toast(`${msg.results.length} ${isEmail ? 'emails' : 'credentials'} generated`);
           // Refresh output section and header state
@@ -1531,15 +1490,18 @@ async function loadChainletterSection(jobId, job) {
         <label>Network</label>
         <div id="cl-network-radios" style="display:flex;gap:20px;margin-top:6px">
           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px">
-            <input type="radio" name="cl-network" value="private" checked>
+            <input type="radio" name="cl-network" value="private" checked onchange="onClNetworkRadioChange()">
             <span><strong>Private</strong> — certs sent to users, not publicly indexed</span>
           </label>
           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px">
-            <input type="radio" name="cl-network" value="public">
+            <input type="radio" name="cl-network" value="public" onchange="onClNetworkRadioChange()">
             <span><strong>Public</strong> — certs visible on the public network</span>
           </label>
         </div>
         <div id="cl-network-display" style="display:none;margin-top:6px;font-size:13px;color:var(--muted)"></div>
+      </div>
+      <div id="cl-private-warn" style="${hasGroups ? 'display:none' : 'display:block'};font-size:12px;color:#7c3900;background:#fff3e0;border:1px solid #f5a623;border-radius:6px;padding:8px 10px;line-height:1.4">
+        <i class="bi bi-exclamation-triangle-fill"></i> <strong>Private collections don't generate claim links.</strong> Emails will not include claim URLs or QR codes. Use <strong>Public</strong> if you need recipients to claim their credentials.
       </div>
       <div>
         <button class="btn-gold" onclick="assignChainletterCollection('${jobId}')">
@@ -1592,15 +1554,19 @@ function renderChainletterLocked(el, jobId, collection, job = {}) {
         : `<button class="btn-gold" id="cl-send-btn" onclick="sendToChainletter('${jobId}')"><i class="bi bi-send"></i> Send to Chainletter</button>`
       }
     </div>
+    ${collection.network !== 'public'
+      ? `<div style="font-size:12px;color:#7c3900;background:#fff3e0;border:1px solid #f5a623;border-radius:6px;padding:8px 10px;margin-top:8px;line-height:1.4">
+           <i class="bi bi-exclamation-triangle-fill"></i> <strong>Private collection:</strong> claim links will not be generated. Emails will not include claim URLs or QR codes.
+         </div>`
+      : ''}
     ${sent
-      ? `<div id="cl-email-section" style="margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb"></div>`
+      ? ''
       : `<div id="cl-send-progress" style="display:none">
            <div class="cl-progress-bar-wrap"><div class="cl-progress-bar" id="cl-progress-bar"></div></div>
            <div class="cl-log" id="cl-log"></div>
-         </div>
-         <div id="cl-email-section"></div>`
+         </div>`
     }`;
-  // If already sent (page reload), load the email section async
+  // If already sent (page reload), load the email section in its own box
   if (sent) loadEmailSection(jobId);
 }
 
@@ -1619,6 +1585,7 @@ function onClSelectChange() {
   newWrap.style.display = isNew ? 'block' : 'none';
   networkWrap.style.display = (isNew || isExisting) ? 'block' : 'none';
 
+  const privateWarn = document.getElementById('cl-private-warn');
   if (isExisting) {
     const opt = sel.options[sel.selectedIndex];
     const net = opt.dataset.network || 'private';
@@ -1627,12 +1594,21 @@ function onClSelectChange() {
     networkRadios.style.display = 'none';
     networkDisplay.style.display = 'block';
     networkDisplay.innerHTML = `${icon} <strong>${label}</strong> <span style="color:var(--muted)">(set on existing collection)</span>`;
+    if (privateWarn) privateWarn.style.display = net === 'private' ? 'block' : 'none';
   } else {
     networkRadios.style.display = 'flex';
     networkDisplay.style.display = 'none';
+    if (privateWarn) privateWarn.style.display = isNew ? 'block' : 'none'; // default: private is pre-checked
   }
 }
 window.onClSelectChange = onClSelectChange;
+
+function onClNetworkRadioChange() {
+  const val = document.querySelector('input[name="cl-network"]:checked')?.value;
+  const warn = document.getElementById('cl-private-warn');
+  if (warn) warn.style.display = val === 'private' ? 'block' : 'none';
+}
+window.onClNetworkRadioChange = onClNetworkRadioChange;
 
 async function sendToChainletter(jobId) {
   const btn = document.getElementById('cl-send-btn');
@@ -1702,14 +1678,16 @@ window.assignChainletterCollection = assignChainletterCollection;
 window.sendToChainletter = sendToChainletter;
 
 async function loadEmailSection(jobId, claimLinks) {
-  const el = document.getElementById('cl-email-section');
+  const el = document.getElementById('email-section');
   if (!el) return;
 
   // If claimLinks weren't passed in (page reload), fetch from job meta
+  let collectionNetwork = null;
   if (!claimLinks) {
     try {
       const job = await API.get(`/api/jobs/${jobId}`);
       claimLinks = job?.chainletterClaimLinks ?? {};
+      collectionNetwork = job?.chainletterCollection?.network ?? null;
     } catch { claimLinks = {}; }
   }
 
@@ -1722,6 +1700,7 @@ async function loadEmailSection(jobId, claimLinks) {
   if (!emailTemplates.length) { el.innerHTML = ''; return; }
 
   const linkCount = Object.keys(claimLinks).length;
+  const isPrivate = collectionNetwork === 'private' || (collectionNetwork === null && linkCount === 0);
   el.innerHTML = `
     <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px">
       <i class="bi bi-envelope-arrow-up"></i> Generate Claim Emails
@@ -1729,7 +1708,9 @@ async function loadEmailSection(jobId, claimLinks) {
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
       ${linkCount > 0
         ? `${linkCount} claim link${linkCount !== 1 ? 's' : ''} retrieved from Chainletter. Each email will include the recipient's personal claim link.`
-        : 'Emails will be generated using the credential data. Claim links will be empty until files are sent to Chainletter.'}
+        : collectionNetwork === 'private'
+          ? `<span style="color:#7c3900"><i class="bi bi-exclamation-triangle-fill"></i> <strong>Private collection:</strong> claim links are not available. Emails will not include claim URLs or QR codes.</span>`
+          : 'Emails will be generated using the credential data. Claim links will be empty until files are sent to Chainletter.'}
     </p>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <select id="cl-email-tmpl" style="font-size:13px;padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#1a1a2e;min-width:200px;">
@@ -1740,8 +1721,72 @@ async function loadEmailSection(jobId, claimLinks) {
       </button>
     </div>
     <div id="cl-email-result" style="margin-top:12px;font-size:13px"></div>`;
+
+  // Check if emails were already generated and show them
+  let smtpConfigured = false;
+  try {
+    const ws = await API.get('/api/workspace');
+    smtpConfigured = !!(ws?.smtp?.host && ws?.smtp?.hasPass);
+  } catch {}
+  try {
+    const existing = await API.get(`/api/jobs/${jobId}/output/mail_merge`);
+    const result = document.getElementById('cl-email-result');
+    if (existing?.length && result) renderMailMergeResult(jobId, existing, smtpConfigured, result);
+  } catch {}
 }
 window.loadEmailSection = loadEmailSection;
+
+function renderMailMergeResult(jobId, files, smtpConfigured, container) {
+  const links = files
+    .map(f => `<button class="btn-outline-cred btn-sm-cred" onclick="downloadFile('/api/jobs/${jobId}/output/mail_merge/${encodeURIComponent(f.name)}','${f.name}')">
+      <i class="bi bi-download"></i> ${f.name}
+    </button>`)
+    .join('');
+  const emlCount = files.filter(f => f.name.endsWith('.eml')).length;
+  const emlZipBtn = emlCount > 1
+    ? `<button class="btn-outline-cred btn-sm-cred" onclick="downloadFile('/api/jobs/${jobId}/output/mail_merge.zip','emails-${jobId}.zip')"><i class="bi bi-file-zip"></i> Download All EMLs as ZIP (${emlCount} files)</button>`
+    : '';
+  const sendBtn = emlCount > 0
+    ? smtpConfigured
+      ? `<button class="btn-primary-cred" id="send-all-emails-btn" onclick="sendAllEmails('${jobId}', ${emlCount})">
+           <i class="bi bi-send"></i> Send All ${emlCount} Email${emlCount !== 1 ? 's' : ''}
+         </button>`
+      : `<button class="btn-primary-cred" disabled title="Configure SMTP in Settings to send emails" style="opacity:0.5;cursor:not-allowed">
+           <i class="bi bi-send"></i> Send All ${emlCount} Email${emlCount !== 1 ? 's' : ''}
+         </button>
+         <span style="font-size:11px;color:var(--muted)"><i class="bi bi-exclamation-circle"></i> SMTP not configured — go to Settings</span>`
+    : '';
+  container.innerHTML = `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+      ${files.length} file${files.length !== 1 ? 's' : ''} in <code>mail_merge/</code> — includes .eml per recipient, combined .mbox, and manifest CSV:
+    </div>
+    ${emlZipBtn ? `<div style="margin-bottom:8px">${emlZipBtn}</div>` : ''}
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:${sendBtn ? '12px' : '0'}">${links}</div>
+    ${sendBtn ? `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">${sendBtn}</div>` : ''}
+    <div id="send-emails-result" style="margin-top:8px;font-size:12px"></div>`;
+}
+window.renderMailMergeResult = renderMailMergeResult;
+
+async function sendAllEmails(jobId, emlCount) {
+  const btn = document.getElementById('send-all-emails-btn');
+  const resultEl = document.getElementById('send-emails-result');
+  btn.disabled = true;
+  btn.innerHTML = `<i class="bi bi-arrow-repeat spin"></i> Sending…`;
+  try {
+    const data = await API.post(`/api/jobs/${jobId}/send-emails`, {});
+    const parts = [`<span style="color:#22c55e"><i class="bi bi-check2-circle"></i> ${data.sent} sent</span>`];
+    if (data.skipped) parts.push(`<span style="color:var(--muted)">${data.skipped} skipped (no To: address)</span>`);
+    if (data.errors?.length) parts.push(`<span style="color:#dc3545">${data.errors.length} failed</span>`);
+    resultEl.innerHTML = parts.join(' &nbsp;·&nbsp; ');
+    btn.innerHTML = `<i class="bi bi-check2-all"></i> Sent`;
+    toast(`${data.sent} email${data.sent !== 1 ? 's' : ''} sent`);
+  } catch (e) {
+    resultEl.innerHTML = `<span style="color:#dc3545"><i class="bi bi-x-circle"></i> ${e.message}</span>`;
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-send"></i> Send All ${emlCount} Email${emlCount !== 1 ? 's' : ''}`;
+  }
+}
+window.sendAllEmails = sendAllEmails;
 
 async function generateEmailsForJob(jobId) {
   const select = document.getElementById('cl-email-tmpl');
@@ -1759,21 +1804,9 @@ async function generateEmailsForJob(jobId) {
     btn.innerHTML = '<i class="bi bi-check2"></i> Generated';
 
     if (data.files?.length) {
-      const links = data.files
-        .map(f => `<button class="btn-outline-cred btn-sm-cred" onclick="downloadFile('/api/jobs/${jobId}/output/mail_merge/${encodeURIComponent(f.name)}','${f.name}')">
-          <i class="bi bi-download"></i> ${f.name}
-        </button>`)
-        .join('');
-      const emlCount = data.files.filter(f => f.name.endsWith('.eml')).length;
-      const emlZipBtn = emlCount > 1
-        ? `<button class="btn-outline-cred btn-sm-cred" onclick="downloadFile('/api/jobs/${jobId}/output/mail_merge.zip','emails-${jobId}.zip')"><i class="bi bi-file-zip"></i> Download All EMLs as ZIP (${emlCount} files)</button>`
-        : '';
-      result.innerHTML = `
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
-          ${data.files.length} file${data.files.length !== 1 ? 's' : ''} in <code>mail_merge/</code> — includes .eml per recipient, combined .mbox, and manifest CSV:
-        </div>
-        ${emlZipBtn ? `<div style="margin-bottom:8px">${emlZipBtn}</div>` : ''}
-        <div style="display:flex;flex-wrap:wrap;gap:6px">${links}</div>`;
+      let smtpConfigured = false;
+      try { const ws = await API.get('/api/workspace'); smtpConfigured = !!(ws?.smtp?.host && ws?.smtp?.hasPass); } catch {}
+      renderMailMergeResult(jobId, data.files, smtpConfigured, result);
     }
   } catch(e) {
     toast(`Email generation failed: ${e.message}`, 'error');
@@ -1926,12 +1959,29 @@ async function renderSettings() {
     <!-- ── SMTP Settings ───────────────────────────────────────────────── -->
     <div class="section-card" style="margin-top:16px">
       <h6><i class="bi bi-envelope-at"></i> SMTP / Email Settings</h6>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:18px">Used when sending credential emails directly. Leave blank to skip.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Used when sending credential emails directly. Leave blank to skip.</p>
+      <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:12px;line-height:1.7">
+        <span style="font-weight:600;color:var(--navy)">Recommended providers</span>
+        <span style="color:var(--muted)"> — all use port 587, TLS unchecked (STARTTLS):</span>
+        <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:11px">
+          <thead><tr style="color:var(--muted);font-weight:700;letter-spacing:.3px;text-transform:uppercase">
+            <th style="text-align:left;padding:3px 8px 3px 0;border-bottom:1px solid #d0d8f0">Provider</th>
+            <th style="text-align:left;padding:3px 8px;border-bottom:1px solid #d0d8f0">SMTP Host</th>
+            <th style="text-align:left;padding:3px 0 3px 8px;border-bottom:1px solid #d0d8f0">Username</th>
+          </tr></thead>
+          <tbody style="color:var(--text)">
+            <tr><td style="padding:4px 8px 4px 0;font-weight:600">Amazon SES</td><td style="padding:4px 8px;font-family:monospace">email-smtp.us-east-1.amazonaws.com</td><td style="padding:4px 0 4px 8px;color:var(--muted)">IAM SMTP credentials</td></tr>
+            <tr><td style="padding:4px 8px 4px 0;font-weight:600">SendGrid</td><td style="padding:4px 8px;font-family:monospace">smtp.sendgrid.net</td><td style="padding:4px 0 4px 8px;color:var(--muted)">Username: <code style="background:#e8edf8;padding:1px 4px;border-radius:3px">apikey</code> · Password: API key</td></tr>
+            <tr><td style="padding:4px 8px 4px 0;font-weight:600">Mailgun</td><td style="padding:4px 8px;font-family:monospace">smtp.mailgun.org</td><td style="padding:4px 0 4px 8px;color:var(--muted)">Mailgun SMTP login</td></tr>
+            <tr><td style="padding:4px 8px 4px 0;font-weight:600">Postmark</td><td style="padding:4px 8px;font-family:monospace">smtp.postmarkapp.com</td><td style="padding:4px 0 4px 8px;color:var(--muted)">Server API Token (as both user &amp; pass)</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       <div class="smtp-grid">
         <div class="smtp-field">
           <label>SMTP Host</label>
-          <input type="text" id="smtp-host" placeholder="smtp.example.com" value="${(smtp.host||'').replace(/"/g,'&quot;')}">
+          <input type="text" id="smtp-host" placeholder="e.g. smtp.sendgrid.net" value="${(smtp.host||'').replace(/"/g,'&quot;')}">
         </div>
         <div class="smtp-field">
           <label>Port</label>

@@ -1,15 +1,17 @@
 import fs from 'fs-extra';
 import path from 'path';
 import qrcode from 'qrcode';
+import { stringify as csvStringify } from 'csv-stringify/sync';
 import { parseCSV, applyReplacements } from './csv.js';
 import { getWorkspace, parseTemplateMeta } from './jobs.js';
 
 async function generateQR(url) {
-  if (!url || url.trim() === '') return '';
+  if (!url || url.trim() === '') return { dataUrl: '', warned: false };
   try {
-    return await qrcode.toDataURL(url, { margin: 1, width: 180 });
+    const dataUrl = await qrcode.toDataURL(url, { margin: 1, width: 180 });
+    return { dataUrl, warned: false };
   } catch {
-    return '';
+    return { dataUrl: '', warned: true };
   }
 }
 
@@ -18,6 +20,11 @@ function safeFilename(name) {
 }
 
 // ── EML generation ────────────────────────────────────────────────────────────
+
+// Strip characters that would allow MIME header injection
+function sanitizeHeader(v) {
+  return String(v ?? '').replace(/[\r\n\0]/g, '');
+}
 
 function buildPlainText(row) {
   const name   = row.FullName || row.FName || 'Recipient';
@@ -39,12 +46,19 @@ function buildPlainText(row) {
   return lines.join('\n');
 }
 
+function buildFrom(row) {
+  const name    = sanitizeHeader(row.WorkspaceIssuer || 'Issuer');
+  const address = sanitizeHeader(row.WorkspaceSenderEmail || '');
+  return address ? `"${name}" <${address}>` : `"${name}" <noreply@credcli.local>`;
+}
+
 function buildEml(htmlBody, row, subject) {
-  const recipientName = row.FullName || row.FName || '';
-  const to   = row.Email
-    ? (recipientName ? `${recipientName} <${row.Email}>` : row.Email)
+  const recipientName = sanitizeHeader(row.FullName || row.FName || '');
+  const email = sanitizeHeader(row.Email || '');
+  const to   = email
+    ? (recipientName ? `${recipientName} <${email}>` : email)
     : recipientName || 'Recipient';
-  const from = row.WorkspaceIssuer || 'Issuer';
+  const from = buildFrom(row);
   const boundary = `----=_Part_CredCLI_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const plainText = buildPlainText(row);
 
@@ -52,7 +66,7 @@ function buildEml(htmlBody, row, subject) {
     'MIME-Version: 1.0',
     `From: ${from}`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${sanitizeHeader(subject)}`,
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
     '',
     `--${boundary}`,
@@ -72,11 +86,12 @@ function buildEml(htmlBody, row, subject) {
 }
 
 function buildEmlWithAttachment(htmlBody, plainText, subject, row, attachmentPath) {
-  const recipientName = row.FullName || row.FName || '';
-  const to   = row.Email
-    ? (recipientName ? `"${recipientName}" <${row.Email}>` : row.Email)
+  const recipientName = sanitizeHeader(row.FullName || row.FName || '');
+  const email = sanitizeHeader(row.Email || '');
+  const to   = email
+    ? (recipientName ? `"${recipientName}" <${email}>` : email)
     : recipientName || 'Recipient';
-  const from = row.WorkspaceIssuer || 'Issuer';
+  const from = buildFrom(row);
   const outerBoundary = `----=_Mix_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const innerBoundary = `----=_Alt_${Date.now() + 1}_${Math.random().toString(36).slice(2)}`;
 
@@ -90,7 +105,7 @@ function buildEmlWithAttachment(htmlBody, plainText, subject, row, attachmentPat
     'MIME-Version: 1.0',
     `From: ${from}`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${sanitizeHeader(subject)}`,
     `Content-Type: multipart/mixed; boundary="${outerBoundary}"`,
     '',
     `--${outerBoundary}`,
@@ -121,7 +136,7 @@ function buildEmlWithAttachment(htmlBody, plainText, subject, row, attachmentPat
   ].join('\r\n');
 }
 
-export async function generateMailMergeFolder(outputDir, results, emailTemplateHtml, emailTemplateMeta, claimLinks = {}, onProgress) {
+export async function generateMailMergeFolder(outputDir, results, emailTemplateHtml, emailTemplateMeta, claimLinks = {}, onProgress, verificationLinks = {}) {
   const mmDir = path.join(outputDir, 'mail_merge');
   await fs.ensureDir(mmDir);
 
@@ -130,12 +145,13 @@ export async function generateMailMergeFolder(outputDir, results, emailTemplateH
   try {
     const wsDir = getWorkspace() || path.join(outputDir, '..', '..', '..');
     const wsCfg = await fs.readJson(path.join(wsDir, 'workspace.json'));
-    if (wsCfg.issuerName) workspaceDefaults.WorkspaceIssuer = wsCfg.issuerName;
-    if (wsCfg.logo)       workspaceDefaults.WorkspaceLogo   = wsCfg.logo;
+    if (wsCfg.issuerName)          workspaceDefaults.WorkspaceIssuer     = wsCfg.issuerName;
+    if (wsCfg.logo)                workspaceDefaults.WorkspaceLogo       = wsCfg.logo;
+    if (wsCfg.smtp?.fromAddress)   workspaceDefaults.WorkspaceSenderEmail = wsCfg.smtp.fromAddress;
   } catch {}
 
   const mboxParts = [];
-  const csvRows   = ['To,ToName,Subject,AttachmentFile,ClaimLink'];
+  const csvRows   = [['To', 'ToName', 'Subject', 'AttachmentFile', 'ClaimLink']];
 
   for (const { file, row } of results) {
     const attachPath = path.join(outputDir, file);
@@ -147,7 +163,10 @@ export async function generateMailMergeFolder(outputDir, results, emailTemplateH
     // Fallbacks: map common CSV column names to template field names
     if (!enrichedRow.Title && enrichedRow.CourseName) enrichedRow.Title = enrichedRow.CourseName;
     if (!enrichedRow.WorkspaceIssuer && enrichedRow.Issuer) enrichedRow.WorkspaceIssuer = enrichedRow.Issuer;
-    if (claimLink) { enrichedRow.VerificationURL = claimLink; enrichedRow.QRUrl = claimLink; }
+    if (claimLink) enrichedRow.QRUrl = claimLink;
+    const verificationUrl = verificationLinks[file] || '';
+    if (verificationUrl) enrichedRow.VerificationURL = verificationUrl;
+    else if (claimLink) enrichedRow.VerificationURL = claimLink;
 
     const emailHtml = applyReplacements(emailTemplateHtml, enrichedRow);
     const subject   = applyReplacements(emailTemplateMeta.subject || 'Your credential is ready', enrichedRow);
@@ -160,22 +179,25 @@ export async function generateMailMergeFolder(outputDir, results, emailTemplateH
 
     mboxParts.push(`From credcli@localhost ${new Date().toUTCString()}\r\n${eml}\r\n\r\n`);
 
-    const to   = (enrichedRow.Email || '').replace(/,/g, '');
-    const name = (enrichedRow.FullName || enrichedRow.FName || '').replace(/,/g, ' ');
-    const subj = subject.replace(/,/g, ' ');
-    csvRows.push(`${to},${name},${subj},${path.basename(file)},${claimLink}`);
+    csvRows.push([
+      enrichedRow.Email || '',
+      enrichedRow.FullName || enrichedRow.FName || '',
+      subject,
+      path.basename(file),
+      claimLink,
+    ]);
 
     if (onProgress) onProgress({ type: 'mail_merge_file', file: emlName });
   }
 
   fs.writeFileSync(path.join(mmDir, 'all_recipients.mbox'), mboxParts.join(''), 'utf8');
-  fs.writeFileSync(path.join(mmDir, 'mail_merge_manifest.csv'), csvRows.join('\n'), 'utf8');
+  fs.writeFileSync(path.join(mmDir, 'mail_merge_manifest.csv'), csvStringify(csvRows), 'utf8');
   if (onProgress) onProgress({ type: 'mail_merge_done', count: results.length });
 }
 
 // ── Main render entry ─────────────────────────────────────────────────────────
 
-export async function renderJob(jobDir, format = 'pdf', onProgress, emailTemplatePath = null) {
+export async function renderJob(jobDir, format = 'pdf', onProgress, emailTemplatePath = null, { limit = 0, resume = false } = {}) {
   const csvPath      = path.join(jobDir, 'mailmerge.csv');
   const templatePath = path.join(jobDir, 'template.html');
   const outputDir    = path.join(jobDir, 'output');
@@ -191,29 +213,39 @@ export async function renderJob(jobDir, format = 'pdf', onProgress, emailTemplat
   try {
     const wsDir = getWorkspace() || path.join(jobDir, '..', '..');
     const wsCfg = await fs.readJson(path.join(wsDir, 'workspace.json'));
-    if (wsCfg.issuerName) workspaceDefaults.WorkspaceIssuer = wsCfg.issuerName;
-    if (wsCfg.logo)       workspaceDefaults.WorkspaceLogo   = wsCfg.logo;
+    if (wsCfg.issuerName)          workspaceDefaults.WorkspaceIssuer     = wsCfg.issuerName;
+    if (wsCfg.logo)                workspaceDefaults.WorkspaceLogo       = wsCfg.logo;
+    if (wsCfg.smtp?.fromAddress)   workspaceDefaults.WorkspaceSenderEmail = wsCfg.smtp.fromAddress;
   } catch {}
+
+  // Apply --limit flag
+  const activeRows = limit > 0 ? rows.slice(0, limit) : rows;
 
   // ── Email-only template path (no Playwright) ─────────────────────────────
   if (templateMeta?.type === 'email') {
     const results = [];
     const emailSubjectTpl = templateMeta.subject || 'Your credential is ready';
 
-    for (let i = 0; i < rows.length; i++) {
-      const row     = { ...workspaceDefaults, ...rows[i] };
+    for (let i = 0; i < activeRows.length; i++) {
+      const row     = { ...workspaceDefaults, ...activeRows[i] };
       if (!row.Title && row.CourseName) row.Title = row.CourseName;
       if (!row.WorkspaceIssuer && row.Issuer) row.WorkspaceIssuer = row.Issuer;
+      const recipientName = safeFilename(row.FullName || row.LName || `recipient_${i + 1}`);
+      const outputPath    = path.join(outputDir, `${recipientName}_${row.CredentialID || i + 1}.eml`);
+
+      if (resume && fs.existsSync(outputPath)) {
+        results.push({ name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath), row: { ...row }, skipped: true });
+        if (onProgress) onProgress(i + 1, activeRows.length, results[results.length - 1]);
+        continue;
+      }
+
       const html    = applyReplacements(templateHtml, row);
       const subject = applyReplacements(emailSubjectTpl, row);
       const eml     = buildEml(html, row, subject);
-
-      const recipientName = safeFilename(row.FullName || row.LName || `recipient_${i + 1}`);
-      const outputPath    = path.join(outputDir, `${recipientName}_${row.CredentialID || i + 1}.eml`);
       fs.writeFileSync(outputPath, eml, 'utf8');
 
       results.push({ name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath), row: { ...row } });
-      if (onProgress) onProgress(i + 1, rows.length, results[results.length - 1]);
+      if (onProgress) onProgress(i + 1, activeRows.length, results[results.length - 1]);
     }
 
     await fs.writeJson(path.join(outputDir, 'results.json'), results, { spaces: 2 });
@@ -240,11 +272,23 @@ export async function renderJob(jobDir, format = 'pdf', onProgress, emailTemplat
   const browser = await chromium.launch();
   const results = [];
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = { ...workspaceDefaults, ...rows[i] };
+  for (let i = 0; i < activeRows.length; i++) {
+    const row = { ...workspaceDefaults, ...activeRows[i] };
     if (!row.Title && row.CourseName) row.Title = row.CourseName;
     if (!row.WorkspaceIssuer && row.Issuer) row.WorkspaceIssuer = row.Issuer;
-    const qrDataUrl = await generateQR(row.QRUrl || row.VerificationURL || '');
+
+    const recipientName = safeFilename(row.FullName || row.LName || `recipient_${i + 1}`);
+    const ext        = format === 'png' ? 'png' : 'pdf';
+    const outputPath = path.join(outputDir, `${recipientName}_${row.CredentialID || i + 1}.${ext}`);
+
+    if (resume && fs.existsSync(outputPath)) {
+      const result = { name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath), row: { ...row }, skipped: true };
+      results.push(result);
+      if (onProgress) onProgress(i + 1, activeRows.length, result);
+      continue;
+    }
+
+    const { dataUrl: qrDataUrl, warned: qrWarned } = await generateQR(row.QRUrl || row.VerificationURL || '');
 
     let html = applyReplacements(templateHtml, row);
     html = html.replace(/\{\{QR_CODE_IMAGE\}\}/g, qrDataUrl);
@@ -253,29 +297,27 @@ export async function renderJob(jobDir, format = 'pdf', onProgress, emailTemplat
     fs.writeFileSync(tmpPath, html, 'utf8');
 
     const page = await browser.newPage();
-    await page.setViewportSize({ width, height });
-    await page.goto(`file:///${tmpPath.replace(/\\/g, '/')}`);
-    await page.waitForLoadState('networkidle');
+    try {
+      await page.setViewportSize({ width, height });
+      await page.goto(`file:///${tmpPath.replace(/\\/g, '/')}`, { waitUntil: 'networkidle', timeout: 30000 });
 
-    const recipientName = safeFilename(row.FullName || row.LName || `recipient_${i + 1}`);
-    const ext        = format === 'png' ? 'png' : 'pdf';
-    const outputPath = path.join(outputDir, `${recipientName}_${row.CredentialID || i + 1}.${ext}`);
-
-    if (format === 'png') {
-      await page.screenshot({ path: outputPath, clip: { x: 0, y: 0, width, height } });
-    } else {
-      await page.pdf({
-        path: outputPath,
-        width:  `${width}px`,
-        height: `${height}px`,
-        printBackground: true,
-      });
+      if (format === 'png') {
+        await page.screenshot({ path: outputPath, clip: { x: 0, y: 0, width, height }, timeout: 30000 });
+      } else {
+        await page.pdf({
+          path: outputPath,
+          width:  `${width}px`,
+          height: `${height}px`,
+          printBackground: true,
+          timeout: 30000,
+        });
+      }
+    } finally {
+      await page.close();
+      fs.removeSync(tmpPath);
     }
 
-    await page.close();
-    fs.removeSync(tmpPath);
-
-    const result = { name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath), row: { ...row } };
+    const result = { name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath), row: { ...row }, qrWarned };
     results.push(result);
 
     // Generate matching .eml if an email template was selected
@@ -287,7 +329,10 @@ export async function renderJob(jobDir, format = 'pdf', onProgress, emailTemplat
       fs.writeFileSync(emlPath, eml, 'utf8');
     }
 
-    if (onProgress) onProgress(i + 1, rows.length, result);
+    // Persist results incrementally so a crash doesn't lose all progress
+    await fs.writeJson(path.join(outputDir, 'results.json'), results, { spaces: 2 });
+
+    if (onProgress) onProgress(i + 1, activeRows.length, result);
   }
 
   await browser.close();

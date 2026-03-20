@@ -16,11 +16,20 @@ export function getDataDir() {
     : path.join(process.cwd(), '.data');
 }
 
-// token.json lives at the root of the data dir, or cwd for backward compat
+// token.json lives inside the data dir (.data/token.json).
+// On first call, silently migrate any legacy root-level token.json into .data/.
 export function getTokenPath() {
-  return process.env.PERSIST
-    ? path.join(path.resolve(process.env.PERSIST), 'token.json')
-    : path.join(process.cwd(), 'token.json');
+  const dataPath = path.join(getDataDir(), 'token.json');
+  if (!process.env.PERSIST) {
+    const legacyPath = path.join(process.cwd(), 'token.json');
+    if (fs.existsSync(legacyPath) && !fs.existsSync(dataPath)) {
+      try {
+        fs.ensureDirSync(getDataDir());
+        fs.moveSync(legacyPath, dataPath);
+      } catch { /* best effort */ }
+    }
+  }
+  return dataPath;
 }
 
 export function getPackageTemplatesDir() {
@@ -113,6 +122,20 @@ export function getNextJobId() {
   const nums = jobs.map(j => parseInt(j.jobId.replace('job', ''), 10));
   const next = Math.max(...nums) + 1;
   return `job${String(next).padStart(3, '0')}`;
+}
+
+// Returns { expired: true, message } if the token is expired, otherwise { expired: false }
+export function checkTokenExpiry(token) {
+  if (!token?.expires) return { expired: false };
+  const expiry = new Date(token.expires);
+  if (isNaN(expiry.getTime())) return { expired: false };
+  if (expiry <= new Date()) {
+    return {
+      expired: true,
+      message: `Token expired on ${expiry.toLocaleString()}. Run "credcli register <new-url>" to get a fresh token.`,
+    };
+  }
+  return { expired: false };
 }
 
 export async function initTenantWorkspace(tenant) {

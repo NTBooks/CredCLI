@@ -307,6 +307,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Auth (Chainletter token-based) ───────────────────────────────────────────
 const activeSessions = new Map(); // credcli-token → { jwt, webhookUrl, tenant, groupname, expires }
+const activeRenders  = new Set(); // job IDs currently being rendered
 
 function getSessionsPath() {
   return path.join(getDataDir(), 'sessions.json');
@@ -501,8 +502,8 @@ export async function startServer(port = 3037) {
     res.json({ file: req.params.name, html, meta });
   });
 
-  // Raw HTML endpoint — for iframe previews (no auth required, low-sensitivity)
-  app.get('/api/templates/:name/raw', (_req, res) => {
+  // Raw HTML endpoint — for iframe previews (requires session auth)
+  app.get('/api/templates/:name/raw', auth, (_req, res) => {
     let filePath;
     try { filePath = resolveTemplatePath(getTemplatesDir(), _req.params.name); } catch { return res.status(400).send(''); }
     if (!fs.existsSync(filePath)) return res.status(404).send('');
@@ -595,8 +596,9 @@ export async function startServer(port = 3037) {
         .filter(f => !f.startsWith('_tmp') && f !== 'results.json')
         .map(f => {
           const stat = fs.statSync(path.join(outputDir, f));
-          return { name: f, size: stat.size, mtime: stat.mtime, row: resultsMap[f] ?? null };
-        });
+          return { name: f, size: stat.size, mtime: stat.mtime, isDir: stat.isDirectory(), row: resultsMap[f] ?? null };
+        })
+        .filter(f => !f.isDir);
     } catch {}
     res.json({ ...job, csvRows, outputFiles });
   });
@@ -642,6 +644,10 @@ export async function startServer(port = 3037) {
       if (fs.existsSync(candidate)) emailTemplatePath = candidate;
     }
 
+    if (activeRenders.has(job.jobId)) {
+      return res.status(409).json({ error: 'A render is already in progress for this job. Please wait for it to finish.' });
+    }
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -650,6 +656,7 @@ export async function startServer(port = 3037) {
 
     const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
+    activeRenders.add(job.jobId);
     try {
       const results = await renderJob(job.jobDir, format, (eventOrDone, total, latest) => {
         if (typeof eventOrDone === 'object') {
@@ -661,6 +668,8 @@ export async function startServer(port = 3037) {
       send({ type: 'done', results });
     } catch (err) {
       send({ type: 'error', message: err.message });
+    } finally {
+      activeRenders.delete(job.jobId);
     }
     res.end();
   });
@@ -792,6 +801,7 @@ export async function startServer(port = 3037) {
         .filter(f => !f.startsWith('_tmp') && f !== 'results.json' && /\.(pdf|png)$/i.test(f));
       send({ type: 'start', total: files.length });
       let done = 0;
+      const fileHashes = { ...meta.chainletterFileHashes }; // preserve any existing hashes
       for (const filename of files) {
         const filePath = path.join(outputDir, filename);
         const ext = path.extname(filename).toLowerCase();
@@ -808,34 +818,18 @@ export async function startServer(port = 3037) {
         done++;
         const alreadyExists = !result.success && /already exists/i.test(result.message || '');
         if (!result.success && !alreadyExists) throw new Error(`Upload failed for ${filename}: ${result.message}`);
+        if (result.hash) fileHashes[filename] = result.hash;
         send({ type: 'progress', done, total: files.length, file: filename, hash: result.hash ?? null, skipped: alreadyExists });
       }
 
-      // Fetch claim links for all uploaded files from Chainletter
-      const claimLinks = {};
-      try {
-        const serverBase = new URL(webhookUrl).origin;
-        const linksResp = await fetch(webhookUrl, {
-          headers: { Authorization: `Bearer ${jwt}`, 'group-id': collection.id, 'export-links': 'true' },
-        });
-        const filesData = await linksResp.json();
-        const filesList = Array.isArray(filesData) ? filesData : (filesData.files ?? filesData.data ?? []);
-        for (const f of filesList) {
-          const name = f.name || f.filename || '';
-          // Use the explicit link if provided; fall back to a server-derived URL from the hash
-          const link = f.link || f.url || f.claim_link || f.download_link
-            || (f.hash ? `${serverBase}/view/${f.hash}` : null);
-          if (name && link) claimLinks[name] = link;
-        }
-      } catch {}
-
-      // Persist claim links so generate-emails can use them later
-      meta.chainletterClaimLinks = claimLinks;
+      // Persist file hashes — claim links are fetched after stamp
+      meta.chainletterFileHashes = fileHashes;
+      meta.chainletterClaimLinks = {};
       meta.chainletterSent = true;
       meta.chainletterSentAt = new Date().toISOString();
       await fs.writeJson(path.join(job.jobDir, 'job.json'), meta, { spaces: 2 });
 
-      send({ type: 'done', total: files.length, collectionId: collection.id, claimLinks });
+      send({ type: 'done', total: files.length, collectionId: collection.id, claimLinks: {} });
     } catch (e) {
       send({ type: 'error', message: e.message });
     }
@@ -864,8 +858,9 @@ export async function startServer(port = 3037) {
     const tmplPath = path.join(getTemplatesDir(), path.basename(emailTemplate));
     if (!fs.existsSync(tmplPath)) return res.status(404).json({ error: 'Email template not found' });
 
-    const meta        = await fs.readJson(path.join(job.jobDir, 'job.json'));
-    const claimLinks  = meta.chainletterClaimLinks ?? {};
+    const meta             = await fs.readJson(path.join(job.jobDir, 'job.json'));
+    const claimLinks       = meta.chainletterClaimLinks ?? {};
+    const verificationLinks = meta.chainletterVerificationLinks ?? {};
     const outputDir   = path.join(job.jobDir, 'output');
     const resultsPath = path.join(outputDir, 'results.json');
     if (!fs.existsSync(resultsPath)) return res.status(400).json({ error: 'No results found — run the job first' });
@@ -875,7 +870,7 @@ export async function startServer(port = 3037) {
     const { parseTemplateMeta } = await import('./utils/jobs.js');
     const emailTemplateMeta  = parseTemplateMeta(tmplPath);
 
-    await generateMailMergeFolder(outputDir, results, emailTemplateHtml, emailTemplateMeta, claimLinks);
+    await generateMailMergeFolder(outputDir, results, emailTemplateHtml, emailTemplateMeta, claimLinks, undefined, verificationLinks);
 
     const mmDir = path.join(outputDir, 'mail_merge');
     const files = fs.existsSync(mmDir)
@@ -885,6 +880,49 @@ export async function startServer(port = 3037) {
         })
       : [];
     res.json({ ok: true, count: results.length, files });
+  });
+
+  // Send all .eml files in mail_merge/ via SMTP
+  app.post('/api/jobs/:id/send-emails', auth, async (req, res) => {
+    const job = listJobs().find(j => j.jobId === req.params.id);
+    if (!job) return res.status(404).json({ error: 'Not found' });
+
+    const wsPath = getWsConfigPath();
+    const cfg = fs.existsSync(wsPath) ? await fs.readJson(wsPath) : {};
+    const smtp = cfg.smtp || {};
+    if (!smtp.host) return res.status(400).json({ error: 'SMTP not configured' });
+    if (!smtp.pass) return res.status(400).json({ error: 'SMTP password not set' });
+
+    const mmDir = path.join(job.jobDir, 'output', 'mail_merge');
+    if (!fs.existsSync(mmDir)) return res.status(400).json({ error: 'No mail_merge folder — generate emails first' });
+
+    const emlFiles = fs.readdirSync(mmDir).filter(f => f.endsWith('.eml'));
+    if (!emlFiles.length) return res.status(400).json({ error: 'No .eml files found' });
+
+    const transporter = nodemailer.createTransport({
+      host: smtp.host,
+      port: Number(smtp.port) || 587,
+      secure: !!smtp.secure,
+      auth: { user: smtp.user, pass: smtp.pass },
+    });
+
+    let sent = 0, skipped = 0;
+    const errors = [];
+    for (const file of emlFiles) {
+      const raw = fs.readFileSync(path.join(mmDir, file), 'utf8');
+      const toMatch = raw.match(/^To:\s*(.+)/mi);
+      const toHeader = toMatch ? toMatch[1].trim() : '';
+      const addrMatch = toHeader.match(/<([^>]+)>/) || toHeader.match(/([^\s,]+@[^\s,]+)/);
+      const toAddr = addrMatch ? addrMatch[1] : '';
+      if (!toAddr) { skipped++; continue; }
+      try {
+        await transporter.sendMail({ envelope: { from: smtp.fromAddress || smtp.user, to: toAddr }, raw });
+        sent++;
+      } catch (e) {
+        errors.push({ file, error: e.message });
+      }
+    }
+    res.json({ ok: true, sent, skipped, errors });
   });
 
   // Stamp the Chainletter collection (blockchain postmark)
@@ -905,8 +943,29 @@ export async function startServer(port = 3037) {
       if (!data.success) throw new Error(data.message || 'Stamp failed');
       meta.chainletterStamped = true;
       meta.chainletterStampedAt = new Date().toISOString();
+
+      // Fetch claim links for the whole collection at once
+      const claimLinks = {};
+      const verificationLinks = {};
+      try {
+        const linksResp = await fetch(webhookUrl, {
+          headers: { Authorization: `Bearer ${jwt}`, 'group-id': collection.id, 'export-links': 'true' },
+        });
+        const linksData = await linksResp.json();
+        const permalinks = linksData.export_data?.permalinks ?? [];
+        for (const { filename, shorturl, url, cid } of permalinks) {
+          const link = shorturl ?? url;
+          if (filename && link) {
+            claimLinks[filename] = link;
+            if (cid) verificationLinks[filename] = `${new URL(link).origin}/pverify/${cid}`;
+          }
+        }
+      } catch {}
+      meta.chainletterClaimLinks = claimLinks;
+      meta.chainletterVerificationLinks = verificationLinks;
+
       await fs.writeJson(jobMetaPath, meta, { spaces: 2 });
-      res.json({ ok: true, filesStamped: data.files_stamped });
+      res.json({ ok: true, filesStamped: data.files_stamped, claimLinks });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

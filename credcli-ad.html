@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CredCLI — Credential Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:   #1a237e;
+    --navy2:  #283593;
+    --navy3:  #0d1b4b;
+    --gold:   #c9a84c;
+    --gold2:  #b8973e;
+    --bg:     #f0f2f8;
+    --card:   #ffffff;
+    --text:   #1a1a2e;
+    --muted:  #6c757d;
+    --bdr:    #e2e6f0;
+    --bdr2:   #d0d5ee;
+    --tint:   #eaecf5;
+    --green:  #2e7d32;
+    --radius: 12px;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+
+  /* ── HERO (uses app login gradient) ── */
+  .hero {
+    background: linear-gradient(135deg, var(--navy3) 0%, var(--navy) 60%, var(--navy2) 100%);
+    color: white;
+    text-align: center;
+    padding: 80px 32px 72px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(201,168,76,0.18);
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 28px;
+  }
+
+  .badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 8px var(--gold);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  h1 {
+    font-size: clamp(38px, 5.5vw, 68px);
+    font-weight: 900;
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    margin-bottom: 22px;
+  }
+
+  h1 .gold { color: var(--gold); }
+
+  .hero-sub {
+    font-size: 17px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.65);
+    max-width: 580px;
+    margin: 0 auto 40px;
+  }
+
+  .hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--gold);
+    color: var(--navy3);
+    font-size: 14px;
+    font-weight: 800;
+    padding: 13px 30px;
+    border-radius: 8px;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    margin-right: 10px;
+    transition: background .15s;
+  }
+
+  .hero-cta:hover { background: var(--gold2); }
+
+  .hero-cta-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255,255,255,0.65);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 13px 24px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.18);
+    text-decoration: none;
+    transition: all .15s;
+  }
+
+  .hero-cta-ghost:hover { color: white; border-color: rgba(255,255,255,0.4); }
+
+  /* ── PAGE WRAPPER ── */
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px 64px;
+  }
+
+  /* ── TERMINAL ── */
+  .terminal-wrap {
+    margin: -32px auto 0;
+    max-width: 820px;
+    background: var(--navy3);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(13,27,75,0.35);
+    position: relative;
+    z-index: 10;
+  }
+
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 16px;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+
+  .terminal-title {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .terminal-body {
+    padding: 22px 26px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.95;
+  }
+
+  .tcmd  { color: #c9a84c; }
+  .targ  { color: #90caf9; }
+  .tflag { color: rgba(255,255,255,0.5); }
+  .tval  { color: rgba(255,255,255,0.75); }
+  .tcmt  { color: rgba(255,255,255,0.22); }
+  .tok   { color: #66bb6a; }
+  .tout  { color: rgba(255,255,255,0.38); }
+  .tprompt { color: rgba(255,255,255,0.2); margin-right: 4px; user-select: none; }
+
+  /* ── SECTION HELPERS ── */
+  .section {
+    margin: 56px 0;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin-bottom: 10px;
+    opacity: 0.6;
+  }
+
+  .section-title {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+
+  .section-sub {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.65;
+    max-width: 560px;
+  }
+
+  /* ── WORKFLOW STEPS ── */
+  .workflow {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    margin-top: 36px;
+    background: var(--bdr);
+    border: 1px solid var(--bdr);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  @media (max-width: 800px) { .workflow { grid-template-columns: 1fr 1fr; } }
+
+  .step {
+    background: var(--card);
+    padding: 24px 20px;
+  }
+
+  .step-num {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+
+  .step-icon { font-size: 22px; margin-bottom: 10px; display: block; }
+
+  .step h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+
+  .step p {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .step code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--navy);
+    background: var(--tint);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 8px;
+    display: inline-block;
+    border: 1px solid var(--bdr2);
+  }
+
+  /* ── COMMAND GRID ── */
+  .cmd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 10px;
+    margin-top: 28px;
+  }
+
+  .cmd-card {
+    background: var(--card);
+    border: 1px solid var(--bdr);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    transition: box-shadow .15s, border-color .15s;
+  }
+
+  .cmd-card:hover {
+    box-shadow: 0 4px 20px rgba(26,35,126,0.10);
+    border-color: var(--bdr2);
+  }
+
+  .cmd-card-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 7px;
+  }
+
+  .cmd-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  .cmd-card-flags {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .cmd-card p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .cmd-card p code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--navy);
+    background: var(--tint);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* ── FEATURE GRID ── */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    background: var(--bdr);
+    border: 1px solid var(--bdr);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 32px;
+  }
+
+  @media (max-width: 700px) { .features { grid-template-columns: 1fr; } }
+
+  .feature {
+    background: var(--card);
+    padding: 26px 22px;
+  }
+
+  .feature-icon {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    margin-bottom: 14px;
+  }
+
+  .feature h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 7px;
+  }
+
+  .feature p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .feature p code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--navy);
+    background: var(--tint);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* ── TEMPLATE GALLERY ── */
+  .template-gallery {
+    display: flex;
+    gap: 10px;
+    margin-top: 28px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+
+  .tpl-card {
+    flex-shrink: 0;
+    background: var(--card);
+    border: 1px solid var(--bdr);
+    border-radius: 10px;
+    padding: 14px 18px;
+    min-width: 170px;
+    transition: box-shadow .15s, border-color .15s;
+  }
+
+  .tpl-card:hover {
+    box-shadow: 0 4px 16px rgba(26,35,126,0.10);
+    border-color: var(--bdr2);
+  }
+
+  .tpl-icon { font-size: 20px; margin-bottom: 8px; }
+
+  .tpl-card h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 3px;
+    white-space: nowrap;
+  }
+
+  .tpl-card span {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── PILLS ── */
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 18px;
+  }
+
+  .pill {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--navy);
+    background: var(--tint);
+    border: 1px solid var(--bdr2);
+    border-radius: 5px;
+    padding: 4px 10px;
+  }
+
+  /* ── STAT STRIP ── */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    background: var(--bdr);
+    border: 1px solid var(--bdr);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 48px;
+  }
+
+  @media (max-width: 600px) { .stat-strip { grid-template-columns: 1fr 1fr; } }
+
+  .stat {
+    background: var(--card);
+    padding: 26px 24px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-val.gold { color: var(--gold); }
+
+  .stat-lbl {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    padding: 40px 0 24px;
+    border-top: 1px solid var(--bdr);
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .footer strong { color: var(--navy); }
+
+  .footer code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--tint);
+    color: var(--navy);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--bdr2);
+  }
+</style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="badge"><span class="badge-dot"></span>Mail-merge · Blockchain · Credentials</div>
+    <h1>Issue credentials<br>that <span class="gold">actually verify</span>.</h1>
+    <p class="hero-sub">
+      CredCLI turns HTML templates and a CSV spreadsheet into signed PDFs, verifiable badges,
+      email bundles, and blockchain-stamped credentials — in seconds, from your terminal or browser.
+    </p>
+    <a class="hero-cta" href="#">Get started</a>
+    <a class="hero-cta-ghost" href="#">View docs</a>
+  </section>
+
+  <!-- TERMINAL (overlaps hero bottom) -->
+  <div style="background:var(--bg);padding-top:48px;">
+  <div class="page" style="padding-top:0;">
+    <div class="terminal-wrap">
+      <div class="terminal-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+        <div class="terminal-title">bash — CredCLI walkthrough</div>
+      </div>
+      <div class="terminal-body">
+        <div><span class="tcmt"># One-time setup: claim your workspace token</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">register</span> <span class="tval">https://chain.lt/abc123</span></div>
+        <div><span class="tok">✓ Token saved · tenant: acme.chainletter.io</span></div>
+        <br>
+        <div><span class="tcmt"># Brand your workspace</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">workspace</span> <span class="tflag">--issuer</span> <span class="tval">"Acme University"</span> <span class="tflag">--logo</span> <span class="tval">logo.png</span></div>
+        <br>
+        <div><span class="tcmt"># Create a new credential job, load recipients</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">new</span> <span class="tflag">--template</span> <span class="tval">3</span></div>
+        <div><span class="tok">✓ Created job001 · CourseCompletionCertificate · 0 recipients</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">csv</span> <span class="tval">job001 recipients.csv</span></div>
+        <div><span class="tok">✓ Loaded 47 recipients into job001</span></div>
+        <br>
+        <div><span class="tcmt"># Render 47 PDFs via headless Chromium</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">run</span> <span class="tval">job001</span> <span class="tflag">--format</span> <span class="tval">pdf</span></div>
+        <div><span class="tout">  Rendering [████████████████████] 47/47 · credential_047.pdf</span></div>
+        <br>
+        <div><span class="tcmt"># Assign to Chainletter, stamp on-chain, generate emails</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">assign</span> <span class="tval">job001 spring-2026</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">send</span> <span class="tval">job001</span> <span class="tflag">--yes</span></div>
+        <div><span class="tok">✓ 47 files uploaded · claim links stored</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">stamp</span> <span class="tval">job001</span></div>
+        <div><span class="tok">✓ Collection stamped · blockchain record immutable</span></div>
+        <div><span class="tprompt">$</span><span class="tcmd">dsx credcli</span> <span class="targ">email</span> <span class="tval">job001</span></div>
+        <div><span class="tok">✓ 47 .eml files · all_recipients.mbox · manifest.csv</span></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="page">
+
+    <!-- STATS -->
+    <div class="stat-strip">
+      <div class="stat">
+        <div class="stat-val">5</div>
+        <div class="stat-lbl">Built-in templates</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">21<span style="font-size:16px;font-weight:600">+</span></div>
+        <div class="stat-lbl">Standard CSV fields</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val gold">PDF</div>
+        <div class="stat-lbl">PNG · EML · MBOX</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">⛓</div>
+        <div class="stat-lbl">Blockchain-stamped</div>
+      </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <section class="section">
+      <div class="section-label">How it works</div>
+      <div class="section-title">Five steps from spreadsheet to verified credential</div>
+      <div class="workflow">
+        <div class="step">
+          <div class="step-num">01</div>
+          <span class="step-icon">🔑</span>
+          <h3>Register</h3>
+          <p>Claim your Chainletter workspace token from a shortlink.</p>
+          <code>credcli register &lt;url&gt;</code>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <span class="step-icon">📋</span>
+          <h3>New job + CSV</h3>
+          <p>Pick a template, then drop in your recipient spreadsheet.</p>
+          <code>credcli new · csv</code>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <span class="step-icon">🖨️</span>
+          <h3>Run</h3>
+          <p>Headless Chromium renders every row as a PDF or PNG.</p>
+          <code>credcli run --format pdf</code>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <span class="step-icon">⛓️</span>
+          <h3>Stamp</h3>
+          <p>Assign a Chainletter collection, upload files, lock on-chain.</p>
+          <code>credcli assign · send · stamp</code>
+        </div>
+        <div class="step">
+          <div class="step-num">05</div>
+          <span class="step-icon">📬</span>
+          <h3>Email</h3>
+          <p>Generate ready-to-send .eml files and an MBOX archive.</p>
+          <code>credcli email</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMMANDS -->
+    <section class="section">
+      <div class="section-label">Command reference</div>
+      <div class="section-title">Everything available via <code style="font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--navy);background:var(--tint);padding:4px 12px;border-radius:8px;border:1px solid var(--bdr2);">dsx credcli</code></div>
+      <div class="cmd-grid">
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">register</span>
+            <span class="cmd-card-flags">&lt;url&gt; · -i</span>
+          </div>
+          <p>Claim a Chainletter token from a shortlink and save it to <code>.data/token.json</code>. Use <code>-i</code> to inspect the current token (tenant, group, expiry).</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">workspace</span>
+            <span class="cmd-card-flags">--issuer --logo</span>
+          </div>
+          <p>Set your organization name and logo. The logo is base64-embedded in every credential automatically.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">new</span>
+            <span class="cmd-card-flags">--template N</span>
+          </div>
+          <p>Create a new credential job interactively, or pre-select a template with <code>--template</code>. Jobs auto-increment (job001, job002…).</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">templates</span>
+          </div>
+          <p>List all available templates with dimensions and the CSV column names they expect.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">csv</span>
+            <span class="cmd-card-flags">&lt;job&gt; &lt;file&gt;</span>
+          </div>
+          <p>Load a recipient CSV into a job. Headers matched case-insensitively; column count is flexible.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">run</span>
+            <span class="cmd-card-flags">[job] --format pdf|png</span>
+          </div>
+          <p>Render credentials for every recipient via headless Chromium. Outputs to <code>output/</code>.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">list</span>
+          </div>
+          <p>Show all jobs with template name, recipient count, and how many output files have been generated.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">output</span>
+            <span class="cmd-card-flags">&lt;job&gt;</span>
+          </div>
+          <p>List the generated credential files for a job with absolute paths and file sizes.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">assign</span>
+            <span class="cmd-card-flags">&lt;job&gt; &lt;id&gt; --network</span>
+          </div>
+          <p>Link a job to a Chainletter collection. Network defaults to <code>private</code>; pass <code>public</code> for open verification.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">send</span>
+            <span class="cmd-card-flags">&lt;job&gt; --yes</span>
+          </div>
+          <p>Upload rendered credentials to the assigned Chainletter collection. Fetches and stores claim links for emails.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">stamp</span>
+            <span class="cmd-card-flags">&lt;job&gt;</span>
+          </div>
+          <p>Blockchain-stamp the collection, making it immutable. Records timestamp in job metadata.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">email</span>
+            <span class="cmd-card-flags">&lt;job&gt; --email-template</span>
+          </div>
+          <p>Generate .eml files, an MBOX archive, and a manifest CSV. Chainletter claim links are injected automatically.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">serve</span>
+            <span class="cmd-card-flags">--port --no-open</span>
+          </div>
+          <p>Start the web UI at <code>localhost:3037</code> for visual template editing and live credential preview in your browser.</p>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-card-head">
+            <span class="cmd-tag">help</span>
+            <span class="cmd-card-flags">-c · -s</span>
+          </div>
+          <p>Show usage. <code>-c</code> writes a CLAUDE.md for Claude Code; <code>-s</code> writes SKILL.MD for agent workflows.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="section">
+      <div class="section-label">What's inside</div>
+      <div class="section-title">Built for real credential workflows</div>
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon" style="background:var(--tint);">🎨</div>
+          <h3>Template engine</h3>
+          <p>HTML templates with <code>{{Placeholder}}</code> merge tags. 21+ standard fields plus 12 transcript course rows per recipient.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon" style="background:#fff8e1;">📄</div>
+          <h3>PDF &amp; PNG output</h3>
+          <p>Pixel-perfect rendering via Playwright Chromium. Print-to-PDF preserves backgrounds, fonts, and full-bleed layouts.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon" style="background:#e8f5e9;">🔗</div>
+          <h3>QR verification</h3>
+          <p>Auto-generates and embeds a QR code from <code>QRUrl</code> or <code>VerificationURL</code> on every credential.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon" style="background:#e8eaf6;">⛓️</div>
+          <h3>Blockchain stamping</h3>
+          <p>One command locks the entire collection on-chain via Chainletter. Tamper-evident, verifiable forever.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon" style="background:#fce4ec;">📧</div>
+          <h3>Email-ready output</h3>
+          <p>Standards-compliant .eml files with PDF attachments, plain-text + HTML body, and an MBOX archive for bulk import.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon" style="background:#e0f2f1;">🖥️</div>
+          <h3>Web UI</h3>
+          <p>Run <code>dsx credcli serve</code> for a browser-based editor with live preview — no terminal required.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEMPLATES -->
+    <section class="section">
+      <div class="section-label">Built-in templates</div>
+      <div class="section-title">Start immediately — or bring your own</div>
+      <p class="section-sub">Drop a custom HTML file into your workspace templates folder and it appears in <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--navy);background:var(--tint);padding:2px 6px;border-radius:4px;border:1px solid var(--bdr2);">credcli templates</code> automatically. Or define your own templates from scratch using whatever fields you want — any <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--navy);background:var(--tint);padding:2px 6px;border-radius:4px;border:1px solid var(--bdr2);">{{CustomField}}</code> in your HTML becomes a column in your CSV.</p>
+      <div class="template-gallery">
+        <div class="tpl-card">
+          <div class="tpl-icon">🏅</div>
+          <h4>Badge</h4>
+          <span>800 × 800</span>
+        </div>
+        <div class="tpl-card">
+          <div class="tpl-icon">🏆</div>
+          <h4>Certificate of Achievement</h4>
+          <span>1200 × 900</span>
+        </div>
+        <div class="tpl-card">
+          <div class="tpl-icon">📜</div>
+          <h4>Course Completion</h4>
+          <span>1200 × 900</span>
+        </div>
+        <div class="tpl-card">
+          <div class="tpl-icon">🎓</div>
+          <h4>Diploma</h4>
+          <span>1200 × 900</span>
+        </div>
+        <div class="tpl-card">
+          <div class="tpl-icon">📊</div>
+          <h4>Transcript</h4>
+          <span>1200 × 900 · 12 rows</span>
+        </div>
+        <div class="tpl-card">
+          <div class="tpl-icon">✉️</div>
+          <h4>Email Template</h4>
+          <span>600 × 900 · type: email</span>
+        </div>
+        <div class="tpl-card" style="border-style:dashed;opacity:0.45;">
+          <div class="tpl-icon">＋</div>
+          <h4>Your template</h4>
+          <span>any fields</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CSV FIELDS -->
+    <section class="section">
+      <div class="section-label">CSV columns supported</div>
+      <div class="section-title">Standard fields — or invent your own</div>
+      <p class="section-sub">Use any subset of these columns in your CSV. Unmatched columns are ignored; missing fields render as blank. Custom templates can add any fields they need — just match column names to your <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--navy);background:var(--tint);padding:2px 6px;border-radius:4px;border:1px solid var(--bdr2);">{{Placeholders}}</code>.</p>
+      <div class="pills">
+        <span class="pill">FullName</span>
+        <span class="pill">FName</span>
+        <span class="pill">LName</span>
+        <span class="pill">Email</span>
+        <span class="pill">Title</span>
+        <span class="pill">Achievement</span>
+        <span class="pill">BadgeLevel</span>
+        <span class="pill">CredentialID</span>
+        <span class="pill">Institution</span>
+        <span class="pill">Issuer</span>
+        <span class="pill">Signature</span>
+        <span class="pill">Location</span>
+        <span class="pill">IssueDate</span>
+        <span class="pill">ExpirationDate</span>
+        <span class="pill">CourseName</span>
+        <span class="pill">Major</span>
+        <span class="pill">GPA</span>
+        <span class="pill">Hours</span>
+        <span class="pill">QRUrl</span>
+        <span class="pill">VerificationURL</span>
+        <span class="pill">Course1–12 Name/Grade/Credits/Semester</span>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <p><strong>dsx credcli</strong> &nbsp;·&nbsp; Issue credentials at scale &nbsp;·&nbsp; Powered by Chainletter</p>
+      <p style="margin-top:10px;font-size:12px;">
+        Run <code>dsx credcli help</code> to get started &nbsp;·&nbsp;
+        <code>dsx credcli serve</code> to open the web UI
+      </p>
+    </footer>
+
+  </div><!-- /page -->
+</body>
+</html>

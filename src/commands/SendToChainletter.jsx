@@ -1,19 +1,34 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Text, useApp } from 'ink';
+import { Box, Text, useApp, useInput } from 'ink';
 import fs from 'fs-extra';
 import path from 'path';
-import { listJobs, getTokenPath } from '../utils/jobs.js';
+import { listJobs, getTokenPath, checkTokenExpiry } from '../utils/jobs.js';
 
-export default function SendToChainletter({ jobArg }) {
+export default function SendToChainletter({ jobArg, yes, no }) {
   const { exit } = useApp();
   const [lines, setLines]       = useState([]);
+  // status: 'working' | 'confirm' | 'done' | 'error'
   const [status, setStatus]     = useState('working');
   const [error, setError]       = useState(null);
   const [summary, setSummary]   = useState(null);
+  const [confirmInfo, setConfirmInfo] = useState(null);
+  const [pendingRun, setPendingRun]   = useState(null);
 
   function log(text, color = 'gray') {
     setLines(prev => [...prev, { text, color }]);
   }
+
+  useInput((input) => {
+    if (status !== 'confirm') return;
+    if (input.toLowerCase() === 'y') {
+      setStatus('working');
+      pendingRun();
+    } else {
+      setStatus('error');
+      setError('Cancelled.');
+      setTimeout(() => exit(), 100);
+    }
+  });
 
   useEffect(() => {
     if (!jobArg) {
@@ -23,13 +38,16 @@ export default function SendToChainletter({ jobArg }) {
       return;
     }
 
-    async function run() {
+    async function run(skipConfirm = false) {
       try {
         // Load token
         const tokenPath = getTokenPath();
         if (!await fs.pathExists(tokenPath)) throw new Error('No token.json found. Run "credcli register <url>" first.');
         const token = await fs.readJson(tokenPath);
         if (!token.jwt || !token.webhookUrl) throw new Error('token.json is missing jwt or webhookUrl. Re-run "credcli register <url>".');
+
+        const expiry = checkTokenExpiry(token);
+        if (expiry.expired) throw new Error(expiry.message);
 
         // Find job
         const jobs = listJobs();
@@ -48,13 +66,56 @@ export default function SendToChainletter({ jobArg }) {
         const outDir = path.join(job.jobDir, 'output');
         if (!await fs.pathExists(outDir)) throw new Error(`Output folder not found. Run "credcli run ${job.jobId}" first.`);
 
-        const files = (await fs.readdir(outDir)).filter(f => !f.startsWith('_tmp') && f !== 'results.json');
-        if (files.length === 0) throw new Error(`No output files in ${outDir}. Run "credcli run ${job.jobId}" first.`);
+        // Only upload credential files (pdf/png) — exclude mail_merge/, .eml, results.json
+        const files = (await fs.readdir(outDir)).filter(f => /\.(pdf|png)$/i.test(f));
+        if (files.length === 0) throw new Error(`No PDF/PNG files in ${outDir}. Run "credcli run ${job.jobId}" first.`);
+
+        // Confirmation gate before irreversible upload (skip with --yes / abort with --no)
+        if (!skipConfirm && no) {
+          throw new Error('Cancelled (--no).');
+        }
+        if (!skipConfirm && !yes) {
+          setConfirmInfo({ count: files.length, collectionId: collection.id, network: collection.network || 'private', jobId: job.jobId });
+          setPendingRun(() => () => run(true));
+          setStatus('confirm');
+          return;
+        }
 
         log(`Uploading ${files.length} file${files.length !== 1 ? 's' : ''} to collection "${collection.id}"…`);
 
         let done = 0;
         let skipped = 0;
+        const fileHashes = { ...meta.chainletterFileHashes }; // preserve any existing hashes
+
+        // Always upload a unique manifest so the collection has at least one new item
+        // (the server won't create the collection properly if every file already exists)
+        /* global __CREDCLI_VERSION__ */
+        const credcliVersion = typeof __CREDCLI_VERSION__ !== 'undefined' ? __CREDCLI_VERSION__ : 'dev';
+        const manifestFilename = `credcli-manifest-${Date.now()}.json`;
+        const manifestContent = JSON.stringify({
+          tool: 'credcli',
+          version: credcliVersion,
+          collectionId: collection.id,
+          collectionName: collection.name ?? collection.id,
+          jobId: job.jobId,
+          fileCount: files.length,
+          createdAt: new Date().toISOString(),
+        }, null, 2);
+        const manifestFormData = new FormData();
+        manifestFormData.append('file', new Blob([manifestContent], { type: 'application/json' }), manifestFilename);
+        const manifestResp = await fetch(token.webhookUrl, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token.jwt}`, 'group-id': collection.id },
+          body: manifestFormData,
+        });
+        const manifestResult = await manifestResp.json();
+        if (!manifestResult.success) {
+          log(`  ⚠ manifest upload: ${manifestResult.message}`, 'yellow');
+        } else {
+          if (manifestResult.hash) fileHashes[manifestFilename] = manifestResult.hash;
+          log(`  ✔ ${manifestFilename}  (manifest)`, 'green');
+        }
+
         for (const filename of files) {
           const filePath  = path.join(outDir, filename);
           const ext       = path.extname(filename).toLowerCase();
@@ -75,6 +136,8 @@ export default function SendToChainletter({ jobArg }) {
           const alreadyExists = !result.success && /already exists/i.test(result.message || '');
           if (!result.success && !alreadyExists) throw new Error(`Upload failed for ${filename}: ${result.message}`);
 
+          if (result.hash) fileHashes[filename] = result.hash;
+
           if (alreadyExists) {
             skipped++;
             log(`  ⟳ ${filename}  (already exists, skipped)`, 'yellow');
@@ -83,27 +146,11 @@ export default function SendToChainletter({ jobArg }) {
           }
         }
 
-        // Fetch claim links for all uploaded files from Chainletter
-        const claimLinks = {};
-        try {
-          const serverBase = new URL(token.webhookUrl).origin;
-          const linksResp = await fetch(token.webhookUrl, {
-            headers: { Authorization: `Bearer ${token.jwt}`, 'group-id': collection.id, 'export-links': 'true' },
-          });
-          const filesData = await linksResp.json();
-          const filesList = Array.isArray(filesData) ? filesData : (filesData.files ?? filesData.data ?? []);
-          for (const f of filesList) {
-            const name = f.name || f.filename || '';
-            const link = f.link || f.url || f.claim_link || f.download_link
-              || (f.hash ? `${serverBase}/view/${f.hash}` : null);
-            if (name && link) claimLinks[name] = link;
-          }
-        } catch {}
-
-        // Mark as sent and persist claim links
+        // Mark as sent and persist file hashes (claim links available after stamp via credcli stamp)
         meta.chainletterSent       = true;
         meta.chainletterSentAt     = new Date().toISOString();
-        meta.chainletterClaimLinks = claimLinks;
+        meta.chainletterFileHashes = fileHashes;
+        meta.chainletterClaimLinks = {};
         await fs.writeJson(jobMetaPath, meta, { spaces: 2 });
 
         setSummary({ total: files.length, skipped, collectionId: collection.id, jobId: job.jobId });
@@ -119,6 +166,14 @@ export default function SendToChainletter({ jobArg }) {
   }, []);
 
   if (status === 'error') return <Box marginY={1}><Text color="red">✖ {error}</Text></Box>;
+
+  if (status === 'confirm' && confirmInfo) return (
+    <Box flexDirection="column" marginY={1}>
+      <Text>About to upload <Text color="cyan" bold>{confirmInfo.count}</Text> file{confirmInfo.count !== 1 ? 's' : ''} to collection <Text color="cyan">"{confirmInfo.collectionId}"</Text> ({confirmInfo.network} network).</Text>
+      <Text color="yellow">This cannot be undone. Blockchain stamp is permanent once "credcli stamp" is run.</Text>
+      <Text color="white" marginTop={1}>Proceed? (y/N) </Text>
+    </Box>
+  );
 
   return (
     <Box flexDirection="column" marginY={1}>
