@@ -618,6 +618,9 @@ export async function startServer(port = 3037) {
   app.get('/api/jobs/:id/csv', auth, (req, res) => {
     const job = listJobs().find(j => j.jobId === req.params.id);
     if (!job) return res.status(404).json({ error: 'Not found' });
+    if (!fs.existsSync(job.csvPath)) {
+      generateEmptyCSV(job.fields || [], job.csvPath);
+    }
     res.download(job.csvPath, 'mailmerge.csv');
   });
 
