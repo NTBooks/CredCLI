@@ -300,12 +300,17 @@ function loadSessions() {
   try {
     const data = fs.readJsonSync(getSessionsPath());
     const now = Date.now();
+    let loaded = 0, expired = 0;
     for (const [token, session] of Object.entries(data)) {
       // Skip expired sessions
-      if (session.expires && now > new Date(session.expires).getTime()) continue;
+      if (session.expires && now > new Date(session.expires).getTime()) { expired++; continue; }
       activeSessions.set(token, session);
+      loaded++;
     }
-  } catch { /* no sessions file yet */ }
+    console.log(`[sessions] Loaded ${loaded} session(s) from disk${expired ? `, skipped ${expired} expired` : ''}`);
+  } catch (e) {
+    if (e.code !== 'ENOENT') console.warn('[sessions] Failed to load sessions.json:', e.message);
+  }
 }
 
 function persistSessions() {
@@ -315,7 +320,10 @@ function persistSessions() {
     for (const [token, session] of activeSessions) obj[token] = session;
     fs.ensureDirSync(getDataDir());
     fs.writeJsonSync(getSessionsPath(), obj, { spaces: 2 });
-  } catch { /* best effort */ }
+    console.log(`[sessions] Persisted ${activeSessions.size} session(s) to ${getSessionsPath()}`);
+  } catch (e) {
+    console.error('[sessions] Failed to persist sessions:', e.message);
+  }
 }
 
 function auth(req, res, next) {
@@ -531,6 +539,26 @@ export async function startServer(port = 3037) {
       }
     });
 
+    fs.writeFileSync(filePath, html, 'utf8');
+    res.json({ ok: true });
+  });
+
+  // Update template metadata fields (e.g. type)
+  app.patch('/api/templates/:name/meta', auth, (req, res) => {
+    let filePath;
+    try { filePath = resolveTemplatePath(getTemplatesDir(), req.params.name); } catch { return res.status(400).json({ error: 'Invalid file name' }); }
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Not found' });
+    const updates = req.body ?? {};
+    let html = fs.readFileSync(filePath, 'utf8');
+    html = html.replace(/<!--CREDCLI:([\s\S]*?)-->/, (full, json) => {
+      try {
+        const meta = JSON.parse(json);
+        Object.assign(meta, updates);
+        return `<!--CREDCLI:${JSON.stringify(meta)}-->`;
+      } catch {
+        return full;
+      }
+    });
     fs.writeFileSync(filePath, html, 'utf8');
     res.json({ ok: true });
   });

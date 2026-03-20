@@ -5,32 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CredCLI — Credential Generator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --navy:   #1a237e;
-    --navy2:  #283593;
-    --navy3:  #0d1b4b;
-    --gold:   #c9a84c;
-    --gold2:  #b8973e;
-    --bg:     #f0f2f8;
-    --card:   #ffffff;
-    --text:   #1a1a2e;
-    --muted:  #6c757d;
-    --bdr:    #e2e6f0;
-    --bdr2:   #d0d5ee;
-    --tint:   #eaecf5;
-    --green:  #2e7d32;
+    --blue:   #6167c9;
+    --blue2:  #5756a6;
+    --dark:   #1e1e2e;
+    --bg:     #ededed;
+    --card:   #fafafa;
+    --text:   #383838;
+    --muted:  #8b8b8b;
+    --bdr:    #d5d5d5;
+    --bdr2:   #bdbdbd;
+    --tint:   #ecedfc;
+    --green:  #3a7f3b;
     --radius: 12px;
   }
 
-  html { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  html { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
 
-  /* ── HERO (uses app login gradient) ── */
+  /* ── HERO ── */
   .hero {
-    background: linear-gradient(135deg, var(--navy3) 0%, var(--navy) 60%, var(--navy2) 100%);
+    background: linear-gradient(135deg, #1e1e2e 0%, #3d3fa3 60%, var(--blue) 100%);
     color: white;
     text-align: center;
     padding: 80px 32px 72px;
@@ -40,23 +38,23 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: rgba(201,168,76,0.18);
-    border: 1px solid rgba(201,168,76,0.4);
-    border-radius: 999px;
+    background: rgba(97,103,201,0.22);
+    border: 1px solid rgba(97,103,201,0.4);
+    border-radius: 128px;
     padding: 6px 16px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--gold);
+    color: rgba(255,255,255,0.85);
     margin-bottom: 28px;
   }
 
   .badge-dot {
     width: 6px; height: 6px;
     border-radius: 50%;
-    background: var(--gold);
-    box-shadow: 0 0 8px var(--gold);
+    background: #a5b4fc;
+    box-shadow: 0 0 8px #a5b4fc;
     animation: pulse 2s ease-in-out infinite;
   }
 
@@ -66,11 +64,11 @@
     font-size: clamp(38px, 5.5vw, 68px);
     font-weight: 900;
     line-height: 1.06;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
     margin-bottom: 22px;
   }
 
-  h1 .gold { color: var(--gold); }
+  h1 .accent { color: #a5b4fc; }
 
   .hero-sub {
     font-size: 17px;
@@ -78,25 +76,27 @@
     color: rgba(255,255,255,0.65);
     max-width: 580px;
     margin: 0 auto 40px;
+    letter-spacing: -0.02em;
   }
 
   .hero-cta {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    background: var(--gold);
-    color: var(--navy3);
+    background: var(--blue);
+    color: white;
     font-size: 14px;
-    font-weight: 800;
-    padding: 13px 30px;
-    border-radius: 8px;
+    font-weight: 600;
+    padding: 10px 24px;
+    border-radius: 128px;
     text-decoration: none;
-    letter-spacing: 0.01em;
+    letter-spacing: -0.01em;
     margin-right: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
     transition: background .15s;
   }
 
-  .hero-cta:hover { background: var(--gold2); }
+  .hero-cta:hover { background: var(--blue2); }
 
   .hero-cta-ghost {
     display: inline-flex;
@@ -105,8 +105,8 @@
     color: rgba(255,255,255,0.65);
     font-size: 14px;
     font-weight: 500;
-    padding: 13px 24px;
-    border-radius: 8px;
+    padding: 10px 24px;
+    border-radius: 128px;
     border: 1px solid rgba(255,255,255,0.18);
     text-decoration: none;
     transition: all .15s;
@@ -125,11 +125,10 @@
   .terminal-wrap {
     margin: -32px auto 0;
     max-width: 820px;
-    background: var(--navy3);
+    background: var(--dark);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: var(--radius);
     overflow: hidden;
-    box-shadow: 0 24px 64px rgba(13,27,75,0.35);
     position: relative;
     z-index: 10;
   }
@@ -163,12 +162,12 @@
     line-height: 1.95;
   }
 
-  .tcmd  { color: #c9a84c; }
-  .targ  { color: #90caf9; }
+  .tcmd  { color: #a5b4fc; }
+  .targ  { color: #7dd3fc; }
   .tflag { color: rgba(255,255,255,0.5); }
   .tval  { color: rgba(255,255,255,0.75); }
   .tcmt  { color: rgba(255,255,255,0.22); }
-  .tok   { color: #66bb6a; }
+  .tok   { color: #86efac; }
   .tout  { color: rgba(255,255,255,0.38); }
   .tprompt { color: rgba(255,255,255,0.2); margin-right: 4px; user-select: none; }
 
@@ -179,20 +178,19 @@
 
   .section-label {
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--navy);
+    color: var(--blue);
     margin-bottom: 10px;
-    opacity: 0.6;
   }
 
   .section-title {
     font-size: 26px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
+    font-weight: 600;
+    letter-spacing: -0.04em;
     line-height: 1.2;
-    color: var(--navy);
+    color: var(--text);
     margin-bottom: 8px;
   }
 
@@ -201,6 +199,7 @@
     font-size: 14px;
     line-height: 1.65;
     max-width: 560px;
+    letter-spacing: -0.02em;
   }
 
   /* ── WORKFLOW STEPS ── */
@@ -208,7 +207,6 @@
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 0;
-    margin-top: 36px;
     background: var(--bdr);
     border: 1px solid var(--bdr);
     border-radius: var(--radius);
@@ -227,7 +225,7 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--gold);
+    color: var(--blue);
     margin-bottom: 10px;
   }
 
@@ -235,9 +233,10 @@
 
   .step h3 {
     font-size: 13px;
-    font-weight: 700;
-    color: var(--navy);
+    font-weight: 600;
+    color: var(--text);
     margin-bottom: 6px;
+    letter-spacing: -0.02em;
   }
 
   .step p {
@@ -249,13 +248,13 @@
   .step code {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
-    color: var(--navy);
+    color: var(--blue);
     background: var(--tint);
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: 6px;
     margin-top: 8px;
     display: inline-block;
-    border: 1px solid var(--bdr2);
+    border: 1px solid rgba(97,103,201,0.2);
   }
 
   /* ── COMMAND GRID ── */
@@ -271,12 +270,11 @@
     border: 1px solid var(--bdr);
     border-radius: var(--radius);
     padding: 16px 18px;
-    transition: box-shadow .15s, border-color .15s;
+    transition: border-color .2s;
   }
 
   .cmd-card:hover {
-    box-shadow: 0 4px 20px rgba(26,35,126,0.10);
-    border-color: var(--bdr2);
+    border-color: var(--blue);
   }
 
   .cmd-card-head {
@@ -290,7 +288,7 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     font-weight: 700;
-    color: var(--navy);
+    color: var(--blue);
   }
 
   .cmd-card-flags {
@@ -303,15 +301,16 @@
     font-size: 13px;
     color: var(--muted);
     line-height: 1.5;
+    letter-spacing: -0.02em;
   }
 
   .cmd-card p code {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
-    color: var(--navy);
+    color: var(--blue);
     background: var(--tint);
     padding: 1px 5px;
-    border-radius: 3px;
+    border-radius: 4px;
   }
 
   /* ── FEATURE GRID ── */
@@ -335,7 +334,7 @@
 
   .feature-icon {
     width: 38px; height: 38px;
-    border-radius: 9px;
+    border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
     font-size: 17px;
     margin-bottom: 14px;
@@ -343,24 +342,26 @@
 
   .feature h3 {
     font-size: 14px;
-    font-weight: 700;
-    color: var(--navy);
+    font-weight: 600;
+    color: var(--text);
     margin-bottom: 7px;
+    letter-spacing: -0.02em;
   }
 
   .feature p {
     font-size: 13px;
     color: var(--muted);
     line-height: 1.6;
+    letter-spacing: -0.02em;
   }
 
   .feature p code {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
-    color: var(--navy);
+    color: var(--blue);
     background: var(--tint);
     padding: 1px 5px;
-    border-radius: 3px;
+    border-radius: 4px;
   }
 
   /* ── TEMPLATE GALLERY ── */
@@ -376,25 +377,25 @@
     flex-shrink: 0;
     background: var(--card);
     border: 1px solid var(--bdr);
-    border-radius: 10px;
+    border-radius: var(--radius);
     padding: 14px 18px;
     min-width: 170px;
-    transition: box-shadow .15s, border-color .15s;
+    transition: border-color .2s;
   }
 
   .tpl-card:hover {
-    box-shadow: 0 4px 16px rgba(26,35,126,0.10);
-    border-color: var(--bdr2);
+    border-color: var(--blue);
   }
 
   .tpl-icon { font-size: 20px; margin-bottom: 8px; }
 
   .tpl-card h4 {
     font-size: 13px;
-    font-weight: 700;
-    color: var(--navy);
+    font-weight: 600;
+    color: var(--text);
     margin-bottom: 3px;
     white-space: nowrap;
+    letter-spacing: -0.02em;
   }
 
   .tpl-card span {
@@ -414,10 +415,10 @@
   .pill {
     font-size: 12px;
     font-family: 'JetBrains Mono', monospace;
-    color: var(--navy);
+    color: var(--blue);
     background: var(--tint);
-    border: 1px solid var(--bdr2);
-    border-radius: 5px;
+    border: 1px solid rgba(97,103,201,0.2);
+    border-radius: 6px;
     padding: 4px 10px;
   }
 
@@ -444,17 +445,19 @@
   .stat-val {
     font-size: 30px;
     font-weight: 800;
-    color: var(--navy);
+    color: var(--text);
     line-height: 1;
     margin-bottom: 6px;
+    letter-spacing: -0.04em;
   }
 
-  .stat-val.gold { color: var(--gold); }
+  .stat-val.accent { color: var(--blue); }
 
   .stat-lbl {
     font-size: 12px;
     color: var(--muted);
     font-weight: 500;
+    letter-spacing: -0.02em;
   }
 
   /* ── FOOTER ── */
@@ -464,18 +467,19 @@
     border-top: 1px solid var(--bdr);
     color: var(--muted);
     font-size: 13px;
+    letter-spacing: -0.02em;
   }
 
-  .footer strong { color: var(--navy); }
+  .footer strong { color: var(--text); }
 
   .footer code {
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     background: var(--tint);
-    color: var(--navy);
+    color: var(--blue);
     padding: 2px 7px;
-    border-radius: 4px;
-    border: 1px solid var(--bdr2);
+    border-radius: 6px;
+    border: 1px solid rgba(97,103,201,0.2);
   }
 </style>
 </head>
@@ -484,12 +488,12 @@
   <!-- HERO -->
   <section class="hero">
     <div class="badge"><span class="badge-dot"></span>Mail-merge · Blockchain · Credentials</div>
-    <h1>Issue credentials<br>that <span class="gold">actually verify</span>.</h1>
+    <h1>Issue credentials<br>that <span class="accent">actually verify</span>.</h1>
     <p class="hero-sub">
       CredCLI turns HTML templates and a CSV spreadsheet into signed PDFs, verifiable badges,
       email bundles, and blockchain-stamped credentials — in seconds, from your terminal or browser.
     </p>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 20px;display:inline-block;margin-bottom:24px;color:rgba(255,255,255,0.75);">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:10px 20px;display:inline-block;margin-bottom:24px;color:rgba(255,255,255,0.75);">
       <span style="color:rgba(255,255,255,0.3);user-select:none;">$ </span>npm install -g @credcli/cli
     </div>
     <br>
@@ -551,7 +555,7 @@
         <div class="stat-lbl">Standard CSV fields</div>
       </div>
       <div class="stat">
-        <div class="stat-val gold">PDF</div>
+        <div class="stat-val accent">PDF</div>
         <div class="stat-lbl">PNG · EML · MBOX</div>
       </div>
       <div class="stat">
@@ -564,7 +568,7 @@
     <section class="section">
       <div class="section-label">How it works</div>
       <div class="section-title">Five steps from spreadsheet to verified credential</div>
-      <div class="workflow">
+      <div class="workflow" style="margin-top:36px;">
         <div class="step">
           <div class="step-num">01</div>
           <span class="step-icon">🔑</span>
@@ -606,7 +610,7 @@
     <!-- COMMANDS -->
     <section class="section">
       <div class="section-label">Command reference</div>
-      <div class="section-title">Everything available via <code style="font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--navy);background:var(--tint);padding:4px 12px;border-radius:8px;border:1px solid var(--bdr2);">credcli</code></div>
+      <div class="section-title">Everything available via <code style="font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--blue);background:var(--tint);padding:4px 12px;border-radius:8px;border:1px solid rgba(97,103,201,0.2);">credcli</code></div>
       <div class="cmd-grid">
 
         <div class="cmd-card">
@@ -738,22 +742,22 @@
           <p>Pixel-perfect rendering via Playwright Chromium. Print-to-PDF preserves backgrounds, fonts, and full-bleed layouts.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon" style="background:#e8f5e9;">🔗</div>
+          <div class="feature-icon" style="background:#daf5d6;">🔗</div>
           <h3>QR verification</h3>
           <p>Auto-generates and embeds a QR code from <code>QRUrl</code> or <code>VerificationURL</code> on every credential.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon" style="background:#e8eaf6;">⛓️</div>
+          <div class="feature-icon" style="background:var(--tint);">⛓️</div>
           <h3>Blockchain stamping</h3>
           <p>One command locks the entire collection on-chain via Chainletter. Tamper-evident, verifiable forever.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon" style="background:#fce4ec;">📧</div>
+          <div class="feature-icon" style="background:#ffe9e4;">📧</div>
           <h3>Email-ready output</h3>
           <p>Standards-compliant .eml files with PDF attachments, plain-text + HTML body, and an MBOX archive for bulk import.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon" style="background:#e0f2f1;">🖥️</div>
+          <div class="feature-icon" style="background:#ededed;">🖥️</div>
           <h3>Web UI</h3>
           <p>Run <code>credcli serve</code> for a browser-based editor with live preview — no terminal required.</p>
         </div>
@@ -764,7 +768,7 @@
     <section class="section">
       <div class="section-label">Built-in templates</div>
       <div class="section-title">Start immediately — or bring your own</div>
-      <p class="section-sub">Drop a custom HTML file into your workspace templates folder and it appears in <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--navy);background:var(--tint);padding:2px 6px;border-radius:4px;border:1px solid var(--bdr2);">credcli templates</code> automatically. Or define your own templates from scratch using whatever fields you want — any <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--navy);background:var(--tint);padding:2px 6px;border-radius:4px;border:1px solid var(--bdr2);">{{CustomField}}</code> in your HTML becomes a column in your CSV.</p>
+      <p class="section-sub">Drop a custom HTML file into your workspace templates folder and it appears in <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--blue);background:var(--tint);padding:2px 6px;border-radius:4px;border:1px solid rgba(97,103,201,0.2);">credcli templates</code> automatically. Or define your own templates from scratch using whatever fields you want — any <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--blue);background:var(--tint);padding:2px 6px;border-radius:4px;border:1px solid rgba(97,103,201,0.2);">{{CustomField}}</code> in your HTML becomes a column in your CSV.</p>
       <div class="template-gallery">
         <div class="tpl-card">
           <div class="tpl-icon">🏅</div>
@@ -808,7 +812,7 @@
     <section class="section">
       <div class="section-label">CSV columns supported</div>
       <div class="section-title">Standard fields — or invent your own</div>
-      <p class="section-sub">Use any subset of these columns in your CSV. Unmatched columns are ignored; missing fields render as blank. Custom templates can add any fields they need — just match column names to your <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--navy);background:var(--tint);padding:2px 6px;border-radius:4px;border:1px solid var(--bdr2);">{{Placeholders}}</code>.</p>
+      <p class="section-sub">Use any subset of these columns in your CSV. Unmatched columns are ignored; missing fields render as blank. Custom templates can add any fields they need — just match column names to your <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--blue);background:var(--tint);padding:2px 6px;border-radius:4px;border:1px solid rgba(97,103,201,0.2);">{{Placeholders}}</code>.</p>
       <div class="pills">
         <span class="pill">FullName</span>
         <span class="pill">FName</span>
