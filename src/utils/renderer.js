@@ -30,7 +30,8 @@ function buildPlainText(row) {
   const name   = row.FullName || row.FName || 'Recipient';
   const issuer = row.WorkspaceIssuer || 'Your issuer';
   const title  = row.Title || row.CourseName || 'your credential';
-  const url    = row.VerificationURL || row.QRUrl || '';
+  const claimUrl   = row.ClaimURL || row.QRUrl || '';
+  const verifyUrl  = row.VerificationURL && row.VerificationURL !== claimUrl ? row.VerificationURL : '';
   const id     = row.CredentialID || '';
   const date   = row.IssueDate || '';
 
@@ -41,7 +42,8 @@ function buildPlainText(row) {
   ];
   if (date) lines.push('', `Issue date: ${date}`);
   if (id)   lines.push(`Credential ID: ${id}`);
-  if (url)  lines.push('', `Claim your certificate: ${url}`);
+  if (claimUrl)  lines.push('', `Claim your certificate: ${claimUrl}`);
+  if (verifyUrl) lines.push('', `Verify this credential (shareable link): ${verifyUrl}`);
   lines.push('', 'Best regards,', issuer);
   return lines.join('\n');
 }
@@ -164,6 +166,7 @@ export async function generateMailMergeFolder(outputDir, results, emailTemplateH
     if (!enrichedRow.Title && enrichedRow.CourseName) enrichedRow.Title = enrichedRow.CourseName;
     if (!enrichedRow.WorkspaceIssuer && enrichedRow.Issuer) enrichedRow.WorkspaceIssuer = enrichedRow.Issuer;
     if (claimLink) enrichedRow.QRUrl = claimLink;
+    if (claimLink) enrichedRow.ClaimURL = claimLink;
     const verificationUrl = verificationLinks[file] || '';
     if (verificationUrl) enrichedRow.VerificationURL = verificationUrl;
     else if (claimLink) enrichedRow.VerificationURL = claimLink;
