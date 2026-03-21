@@ -1,6 +1,6 @@
-FullName,CourseName,Institution,Issuer,IssueDate,CredentialID,BadgeLevel,Achievement,Notes,QRUrl,VerificationURL
-Alice Johnson,Python Fundamentals,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-001,Gold,Successfully completed all Python modules with distinction,Test run recipient 1,,https://chainletter.io/verify/CRED-TEST-001
-Bob Martinez,Data Science Basics,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-002,Silver,Completed the full data science curriculum,Test run recipient 2,,https://chainletter.io/verify/CRED-TEST-002
-Clara Chen,Machine Learning,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-003,Gold,Excelled in all machine learning coursework,Test run recipient 3,,https://chainletter.io/verify/CRED-TEST-003
-David Kim,Web Development,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-004,Bronze,Completed the full web development track,Test run recipient 4,,https://chainletter.io/verify/CRED-TEST-004
-Eva Rossi,Cloud Computing,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-005,Silver,Successfully completed cloud fundamentals,Test run recipient 5,,https://chainletter.io/verify/CRED-TEST-005
+FullName,Email,CourseName,Institution,Issuer,IssueDate,CredentialID,BadgeLevel,Achievement,Notes,QRUrl,VerificationURL
+Alice Johnson,test123@credcli.com,Python Fundamentals,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-001,Gold,Successfully completed all Python modules with distinction,Test run recipient 1,,https://chainletter.io/verify/CRED-TEST-001
+Bob Martinez,test123@credcli.com,Data Science Basics,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-002,Silver,Completed the full data science curriculum,Test run recipient 2,,https://chainletter.io/verify/CRED-TEST-002
+Clara Chen,test123@credcli.com,Machine Learning,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-003,Gold,Excelled in all machine learning coursework,Test run recipient 3,,https://chainletter.io/verify/CRED-TEST-003
+David Kim,test123@credcli.com,Web Development,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-004,Bronze,Completed the full web development track,Test run recipient 4,,https://chainletter.io/verify/CRED-TEST-004
+Eva Rossi,test123@credcli.com,Cloud Computing,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-005,Silver,Successfully completed cloud fundamentals,Test run recipient 5,,https://chainletter.io/verify/CRED-TEST-005

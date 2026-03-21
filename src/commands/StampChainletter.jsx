@@ -3,6 +3,7 @@ import { Box, Text, useApp } from "ink";
 import fs from "fs-extra";
 import path from "path";
 import { listJobs, getTokenPath, checkTokenExpiry } from "../utils/jobs.js";
+import { stampCollection } from "../utils/chainletter.js";
 
 export default function StampChainletter({ jobArg }) {
   const { exit } = useApp();
@@ -53,43 +54,15 @@ export default function StampChainletter({ jobArg }) {
           );
         }
 
-        const r = await fetch(token.webhookUrl, {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token.jwt}`,
-            "group-id": meta.chainletterCollection.id,
-          },
-        });
-        const data = await r.json();
-        if (!data.success)
-          throw new Error(data.message || "Stamp request failed");
+        const { filesStamped, claimLinks, verificationLinks } = await stampCollection(
+          token.webhookUrl,
+          meta.chainletterCollection.id,
+          token.jwt,
+          meta.chainletterCollection.network || 'private',
+        );
 
         meta.chainletterStamped = true;
         meta.chainletterStampedAt = new Date().toISOString();
-
-        // Fetch claim links for the whole collection at once via export-links
-        const claimLinks = {};
-        const verificationLinks = {};
-        try {
-          const linksResp = await fetch(token.webhookUrl, {
-            headers: {
-              Authorization: `Bearer ${token.jwt}`,
-              "group-id": meta.chainletterCollection.id,
-              "export-links": "true",
-            },
-          });
-          const linksData = await linksResp.json();
-          const permalinks = linksData.export_data?.permalinks ?? [];
-          for (const { filename, shorturl, url, cid } of permalinks) {
-            const link = shorturl ?? url;
-            if (filename && link) {
-              claimLinks[filename] = link;
-              if (cid) verificationLinks[filename] = `${new URL(link).origin}/pverify/${cid}`;
-            }
-          }
-        } catch (e) {
-          console.error(`[export-links] collection fetch error: ${e.message}`);
-        }
         meta.chainletterClaimLinks = claimLinks;
         meta.chainletterVerificationLinks = verificationLinks;
 
@@ -98,7 +71,7 @@ export default function StampChainletter({ jobArg }) {
         setInfo({
           jobId: job.jobId,
           collectionId: meta.chainletterCollection.id,
-          filesStamped: data.files_stamped,
+          filesStamped,
           claimLinksCount: Object.keys(claimLinks).length,
           isPrivate: meta.chainletterCollection.network !== "public",
         });

@@ -20,7 +20,7 @@ echo =============================================================
 echo   CredCLI - Full Command Test Suite
 echo   Tests all commands, generates 5 credentials, sends to
 echo   a new Chainletter collection, blockchain-stamps it, and
-echo   generates .eml email files for each recipient.
+echo   generates and sends .eml email files for each recipient.
 echo =============================================================
 echo.
 
@@ -38,7 +38,7 @@ echo -------------------------------------------------------------
 call npm run build
 if errorlevel 1 (
     echo  ERROR: Build failed. Fix the errors above and try again.
-    exit /b 1
+    goto :restore
 )
 echo.
 
@@ -58,6 +58,7 @@ if not exist token.json (
 )
 
 %CLI% register -i
+if errorlevel 1 goto :restore
 echo.
 
 REM ── Derive tenant early so we can back up workspace.json before touching it ──
@@ -79,18 +80,29 @@ if exist "%WORKSPACE_JSON%" (
 ) else (
     echo   No existing workspace.json — will remove test settings on exit.
 )
+
+REM Seed workspace with test config (SMTP host/port; user+pass come from TEST_SENDER/TEST_SENDER_PW env)
+if not exist testworkspace.json (
+    echo  ERROR: testworkspace.json not found in project root.
+    echo         Copy testworkspace.json.example and fill in your SMTP host.
+    goto :restore
+)
+copy /y testworkspace.json "%WORKSPACE_JSON%" >nul
+echo   Test workspace seeded from testworkspace.json.
 echo.
 
 echo -------------------------------------------------------------
 echo  [2/20] Showing current workspace settings  (workspace)
 echo -------------------------------------------------------------
 %CLI% workspace
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [3/20] Setting workspace issuer name  (workspace --issuer)
 echo -------------------------------------------------------------
 %CLI% workspace --issuer "CredCLI Test Issuer"
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
@@ -106,24 +118,28 @@ echo ^</svg^>
 echo   Created: %CD%\%LOGO_FILE%
 echo.
 %CLI% workspace --logo %LOGO_FILE%
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [5/20] Confirming workspace settings  (workspace)
 echo -------------------------------------------------------------
 %CLI% workspace
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [6/20] Listing available templates  (templates)
 echo -------------------------------------------------------------
 %CLI% templates
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [7/20] Current job list before test  (list)
 echo -------------------------------------------------------------
 %CLI% list
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
@@ -132,12 +148,12 @@ echo -------------------------------------------------------------
 set CSV_FILE=test_sample_data.csv
 
 (
-echo FullName,CourseName,Institution,Issuer,IssueDate,CredentialID,BadgeLevel,Achievement,Notes,QRUrl,VerificationURL
-echo Alice Johnson,Python Fundamentals,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-001,Gold,Successfully completed all Python modules with distinction,Test run recipient 1,,https://chainletter.io/verify/CRED-TEST-001
-echo Bob Martinez,Data Science Basics,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-002,Silver,Completed the full data science curriculum,Test run recipient 2,,https://chainletter.io/verify/CRED-TEST-002
-echo Clara Chen,Machine Learning,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-003,Gold,Excelled in all machine learning coursework,Test run recipient 3,,https://chainletter.io/verify/CRED-TEST-003
-echo David Kim,Web Development,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-004,Bronze,Completed the full web development track,Test run recipient 4,,https://chainletter.io/verify/CRED-TEST-004
-echo Eva Rossi,Cloud Computing,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-005,Silver,Successfully completed cloud fundamentals,Test run recipient 5,,https://chainletter.io/verify/CRED-TEST-005
+echo FullName,Email,CourseName,Institution,Issuer,IssueDate,CredentialID,BadgeLevel,Achievement,Notes,QRUrl,VerificationURL
+echo Alice Johnson,test123@credcli.com,Python Fundamentals,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-001,Gold,Successfully completed all Python modules with distinction,Test run recipient 1,,https://chainletter.io/verify/CRED-TEST-001
+echo Bob Martinez,test123@credcli.com,Data Science Basics,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-002,Silver,Completed the full data science curriculum,Test run recipient 2,,https://chainletter.io/verify/CRED-TEST-002
+echo Clara Chen,test123@credcli.com,Machine Learning,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-003,Gold,Excelled in all machine learning coursework,Test run recipient 3,,https://chainletter.io/verify/CRED-TEST-003
+echo David Kim,test123@credcli.com,Web Development,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-004,Bronze,Completed the full web development track,Test run recipient 4,,https://chainletter.io/verify/CRED-TEST-004
+echo Eva Rossi,test123@credcli.com,Cloud Computing,Tech Academy,CredCLI Test Batch,2026-03-18,CRED-TEST-005,Silver,Successfully completed cloud fundamentals,Test run recipient 5,,https://chainletter.io/verify/CRED-TEST-005
 ) > %CSV_FILE%
 
 echo   File:  %CD%\%CSV_FILE%
@@ -148,6 +164,7 @@ echo -------------------------------------------------------------
 echo  [9/20] Creating new job using template 1  (new --template 1)
 echo -------------------------------------------------------------
 %CLI% new --template 1
+if errorlevel 1 goto :restore
 
 for /f "tokens=*" %%i in ('powershell -NoProfile -Command ^
   "$d = '.data\%TENANT%\jobs'; if (Test-Path $d) { $j = Get-ChildItem -Path $d -Directory | Where-Object { $_.Name -match '^job\d+$' } | Sort-Object Name -Descending; if ($j) { $j[0].Name } }"') do set JOBID=%%i
@@ -167,12 +184,14 @@ echo -------------------------------------------------------------
 echo  [10/20] Loading recipient CSV into %JOBID%  (csv)
 echo -------------------------------------------------------------
 %CLI% csv %JOBID% %CSV_FILE%
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [11/20] Job list after CSV upload  (list)
 echo -------------------------------------------------------------
 %CLI% list
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
@@ -181,18 +200,21 @@ echo -------------------------------------------------------------
 echo   This launches a headless Chromium browser - may take ~30 seconds.
 echo.
 %CLI% run %JOBID% --format png
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [13/20] Previewing row 1 of the job  (preview --format png)
 echo -------------------------------------------------------------
 %CLI% preview %JOBID% --row 1 --format png
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [14/20] Listing output files with full paths  (output)
 echo -------------------------------------------------------------
 %CLI% output %JOBID%
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
@@ -202,24 +224,28 @@ for /f "tokens=*" %%i in ('powershell -NoProfile -Command "Get-Date -Format 'tes
 echo   Collection ID: %COLLECTION_ID%
 echo.
 %CLI% assign %JOBID% %COLLECTION_ID% --network public
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [16/20] Uploading output files to Chainletter  (send)
 echo -------------------------------------------------------------
 %CLI% send %JOBID% -y
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [17/20] Blockchain-stamping the collection  (stamp)
 echo -------------------------------------------------------------
 %CLI% stamp %JOBID%
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------
 echo  [18/20] Generating .eml emails for stamped credentials  (email)
 echo -------------------------------------------------------------
 %CLI% email %JOBID% -y
+if errorlevel 1 goto :restore
 echo.
 
 REM Check that email artifacts were actually created
@@ -240,6 +266,7 @@ echo -------------------------------------------------------------
 echo  [19/20] Final job list
 echo -------------------------------------------------------------
 %CLI% list
+if errorlevel 1 goto :restore
 echo.
 
 echo -------------------------------------------------------------

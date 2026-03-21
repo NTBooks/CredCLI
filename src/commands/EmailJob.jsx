@@ -4,6 +4,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import { listJobs, getTemplatesDir, listTemplates, parseTemplateMeta, getTokenPath, checkTokenExpiry } from '../utils/jobs.js';
 import { generateMailMergeFolder } from '../utils/renderer.js';
+import { fetchClaimLinks } from '../utils/chainletter.js';
+import { resolveSmtp, sendEmailsFromMailMerge } from '../utils/email.js';
 
 export default function EmailJob({ jobArg, emailTemplate, yes }) {
   const { exit } = useApp();
@@ -100,18 +102,9 @@ export default function EmailJob({ jobArg, emailTemplate, yes }) {
               if (!expiry.expired && token.jwt && token.webhookUrl) {
                 const groupId = jobMeta.chainletterCollection?.id;
                 log(`Fetching claim links for group ${groupId}…`);
-                const linksResp = await fetch(token.webhookUrl, {
-                  headers: { Authorization: `Bearer ${token.jwt}`, 'group-id': groupId, 'export-links': 'true' },
-                });
-                const linksData = await linksResp.json();
-                const permalinks = linksData.export_data?.permalinks ?? [];
-                for (const { filename, shorturl, url, cid } of permalinks) {
-                  const link = shorturl ?? url;
-                  if (filename && link) {
-                    claimLinks[filename] = link;
-                    if (cid) verificationLinks[filename] = `${new URL(link).origin}/pverify/${cid}`;
-                  }
-                }
+                const result = await fetchClaimLinks(token.webhookUrl, groupId, token.jwt);
+                claimLinks = result.claimLinks;
+                verificationLinks = result.verificationLinks;
                 if (Object.keys(claimLinks).length > 0) {
                   jobMeta.chainletterClaimLinks = claimLinks;
                   jobMeta.chainletterVerificationLinks = verificationLinks;
@@ -135,6 +128,34 @@ export default function EmailJob({ jobArg, emailTemplate, yes }) {
           if (event.type === 'mail_merge_file') log(`  ✔ ${event.file}`, 'green');
           else if (event.type === 'mail_merge_done') setSummary({ count: event.count, outputDir });
         }, verificationLinks);
+
+        // ── SMTP send ─────────────────────────────────────────────────────────
+        if (results.some(r => r.row?.Email)) {
+          let smtpRaw = {};
+          try {
+            const wsDir = path.join(job.jobDir, '..', '..');
+            const wsCfg = await fs.readJson(path.join(wsDir, 'workspace.json'));
+            smtpRaw = wsCfg.smtp || {};
+          } catch {}
+          const smtp = resolveSmtp(smtpRaw);
+
+          if (smtp.host && smtp.pass) {
+            const mmDir = path.join(outputDir, 'mail_merge');
+            log(`Sending emails…`);
+            const { sent, skipped, errors } = await sendEmailsFromMailMerge(mmDir, smtp, ({ toAddr, success, error, skipped: wasSkipped }) => {
+              if (wasSkipped) log(`  ↷ already sent — skipping`, 'gray');
+              else if (success) log(`  ✔ sent → ${toAddr}`, 'green');
+              else log(`  ✖ ${toAddr}: ${error}`, 'red');
+            });
+            if (skipped > 0 && sent === 0 && errors.length === 0) {
+              log(`All ${skipped} already sent — delete mail_merge/.receipts/ to re-send`, 'gray');
+            } else {
+              log(`Sent ${sent}/${sent + errors.length}${skipped > 0 ? ` (${skipped} already sent, skipped)` : ''}`, errors.length === 0 ? 'green' : 'yellow');
+            }
+          } else {
+            log('SMTP not configured — skipping send', 'gray');
+          }
+        }
 
         setStatus('done');
       } catch (e) {

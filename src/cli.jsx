@@ -18,13 +18,24 @@ const cli = meow(`
     (no command)                 Start the web UI server
     serve                        Start the web UI server
     help                         Show this help
+    credits                      Show remaining Chainletter stamp credits
     register <url> [dir]         Claim a Chainletter token and save to token.json
     register -i                  Show info about the current token
-    workspace                    Show current issuer name and logo
+    workspace                    Show current issuer name, logo and SMTP config
     workspace --issuer <name>    Set the workspace issuer name
     workspace --logo <file>      Set the workspace logo (PNG/JPG/SVG → embedded base64)
     workspace --logo ""          Clear the workspace logo
+    workspace --smtp-host <h>    Set SMTP host
+    workspace --smtp-port <p>    Set SMTP port (default 587)
+    workspace --smtp-user <u>    Set SMTP username
+    workspace --smtp-pass <p>    Set SMTP password
+    workspace --smtp-from <f>    Set SMTP from address
+    workspace --smtp-secure      Use TLS (port 465)
+    workspace --test <email>     Send a test email to verify SMTP settings
     templates                    List available templates with their required CSV fields
+    new-template "<name>"        Create a new blank template file
+    reset-template <file>        Reset a template to its original package version
+    collections                  List available Chainletter collections (shows IDs for "assign")
     new                          Create a new job (interactive)
     new --template N             Create a new job from template N (non-interactive)
     run [job]                    Render credentials for a job
@@ -49,6 +60,15 @@ const cli = meow(`
     --info,            -i  Show current token info (for "register")
     --issuer               Issuer / organisation name (for "workspace")
     --logo                 Path to logo image file (for "workspace")
+    --test                 Email address to send test email to (for "workspace")
+    --smtp-host            SMTP server hostname (for "workspace")
+    --smtp-port            SMTP server port (for "workspace")
+    --smtp-user            SMTP username (for "workspace")
+    --smtp-pass            SMTP password (for "workspace")
+    --smtp-from            SMTP from address (for "workspace")
+    --smtp-secure          Use TLS/SSL — port 465 (for "workspace")
+    --width                Template width in px (for "new-template", default 1200)
+    --height               Template height in px (for "new-template", default 900)
     --email-template       Email template filename (for "email")
     --help          Show this help
 
@@ -58,6 +78,7 @@ const cli = meow(`
                     Neither command overwrites an existing file.
 
   Examples
+    $ credcli credits                 Show remaining stamp credits
     $ credcli register https://chainletter.io/jwt/abc123
     $ credcli new --template 1
     $ credcli csv job001 ./recipients.csv
@@ -142,8 +163,17 @@ const cli = meow(`
     emailTemplate: { type: 'string' },
     claude:        { type: 'boolean', shortFlag: 'c', default: false },
     skill:         { type: 'boolean', shortFlag: 's', default: false },
-    issuer: { type: 'string' },
-    logo:   { type: 'string' },
+    issuer:     { type: 'string' },
+    logo:       { type: 'string' },
+    test:       { type: 'string' },
+    smtpHost:   { type: 'string' },
+    smtpPort:   { type: 'string' },
+    smtpUser:   { type: 'string' },
+    smtpPass:   { type: 'string' },
+    smtpFrom:   { type: 'string' },
+    smtpSecure: { type: 'boolean' },
+    width:   { type: 'number', default: 1200 },
+    height:  { type: 'number', default: 900 },
     yes:    { type: 'boolean', shortFlag: 'y', default: false },
     no:     { type: 'boolean', default: false },
     open:   { type: 'boolean', default: true },
@@ -276,10 +306,20 @@ if (command === 'serve' || !command) {
     }
     case 'workspace': {
       const { default: WorkspaceSettings } = await import('./commands/WorkspaceSettings.jsx');
-      const hasFlags = cli.flags.issuer !== undefined || cli.flags.logo !== undefined;
+      const hasFlags = cli.flags.issuer !== undefined || cli.flags.logo !== undefined || cli.flags.test !== undefined
+        || cli.flags.smtpHost !== undefined || cli.flags.smtpPort !== undefined
+        || cli.flags.smtpUser !== undefined || cli.flags.smtpPass !== undefined
+        || cli.flags.smtpFrom !== undefined || cli.flags.smtpSecure !== undefined;
       app = <WorkspaceSettings
         issuer={cli.flags.issuer}
         logoFile={cli.flags.logo}
+        smtpTest={cli.flags.test}
+        smtpHost={cli.flags.smtpHost}
+        smtpPort={cli.flags.smtpPort}
+        smtpUser={cli.flags.smtpUser}
+        smtpPass={cli.flags.smtpPass}
+        smtpFrom={cli.flags.smtpFrom}
+        smtpSecure={cli.flags.smtpSecure}
         showOnly={!hasFlags}
       />;
       break;
@@ -288,6 +328,44 @@ if (command === 'serve' || !command) {
       const { default: ListTemplates } = await import('./commands/ListTemplates.jsx');
       app = <ListTemplates />;
       break;
+    }
+    case 'new-template': {
+      const { default: NewTemplate } = await import('./commands/NewTemplate.jsx');
+      app = <NewTemplate name={cli.input[1]} width={cli.flags.width} height={cli.flags.height} />;
+      break;
+    }
+    case 'reset-template': {
+      const { default: ResetTemplate } = await import('./commands/ResetTemplate.jsx');
+      app = <ResetTemplate name={cli.input[1]} />;
+      break;
+    }
+    case 'collections': {
+      const { default: ListCollections } = await import('./commands/ListCollections.jsx');
+      app = <ListCollections />;
+      break;
+    }
+    case 'credits': {
+      try {
+        const tokenPath = getTokenPath();
+        if (!await fs.pathExists(tokenPath)) {
+          console.log('\n✖  No token.json found. Run "credcli register <url>" first.\n');
+          process.exit(1);
+        }
+        const tok = await fs.readJson(tokenPath);
+        if (!tok.jwt || !tok.webhookUrl) throw new Error('Token missing jwt or webhookUrl');
+        const r = await fetch(tok.webhookUrl, { method: 'HEAD', headers: { Authorization: `Bearer ${tok.jwt}` } });
+        const creditsHeader = r.headers.get('x-credits');
+        const credits = parseInt(creditsHeader, 10);
+        if (Number.isNaN(credits)) {
+          console.log('\n  Stamp credits: (unavailable — server did not return x-credits header)\n');
+        } else {
+          console.log(`\n  Stamp credits remaining: ${credits}\n`);
+        }
+      } catch (e) {
+        console.log(`\n✖  Could not fetch credits: ${e.message}\n`);
+        process.exit(1);
+      }
+      process.exit(0);
     }
     case 'register': {
       const { default: Register } = await import('./commands/Register.jsx');

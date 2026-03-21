@@ -3,6 +3,7 @@ import { Box, Text, useApp } from 'ink';
 import fs from 'fs-extra';
 import path from 'path';
 import { getWorkspace } from '../utils/jobs.js';
+import { resolveSmtp, testSmtp } from '../utils/email.js';
 
 // Reads an image file and returns a base64 data URL
 async function imageToDataUrl(filePath) {
@@ -19,7 +20,7 @@ async function imageToDataUrl(filePath) {
   return `data:${mime};base64,${buf.toString('base64')}`;
 }
 
-export default function WorkspaceSettings({ issuer, logoFile, showOnly }) {
+export default function WorkspaceSettings({ issuer, logoFile, showOnly, smtpTest, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, smtpSecure }) {
   const { exit } = useApp();
   const [result, setResult] = useState(null);
 
@@ -28,6 +29,16 @@ export default function WorkspaceSettings({ issuer, logoFile, showOnly }) {
       const wsPath = path.join(getWorkspace(), 'workspace.json');
       let cfg = {};
       try { cfg = await fs.readJson(wsPath); } catch {}
+
+      // SMTP test mode
+      if (smtpTest) {
+        const smtp = resolveSmtp(cfg.smtp || {});
+        if (!smtp.host) throw new Error('SMTP host not configured. Set it with: credcli workspace (web UI) or edit workspace.json');
+        if (!smtp.pass) throw new Error('SMTP password not set.');
+        const info = await testSmtp(smtp, smtpTest);
+        setResult({ smtpTest: true, to: smtpTest, accepted: info.accepted, messageId: info.messageId });
+        return;
+      }
 
       // Show-only mode (no flags)
       if (showOnly) {
@@ -43,6 +54,16 @@ export default function WorkspaceSettings({ issuer, logoFile, showOnly }) {
         } else {
           cfg.logo = await imageToDataUrl(logoFile);
         }
+      }
+      if (smtpHost !== undefined || smtpPort !== undefined || smtpUser !== undefined ||
+          smtpPass !== undefined || smtpFrom !== undefined || smtpSecure !== undefined) {
+        cfg.smtp = cfg.smtp || {};
+        if (smtpHost !== undefined)   cfg.smtp.host        = smtpHost;
+        if (smtpPort !== undefined)   cfg.smtp.port        = Number(smtpPort);
+        if (smtpUser !== undefined)   cfg.smtp.user        = smtpUser;
+        if (smtpPass !== undefined)   cfg.smtp.pass        = smtpPass;
+        if (smtpFrom !== undefined)   cfg.smtp.fromAddress = smtpFrom;
+        if (smtpSecure !== undefined) cfg.smtp.secure      = smtpSecure;
       }
 
       await fs.ensureDir(path.dirname(wsPath));
@@ -62,6 +83,16 @@ export default function WorkspaceSettings({ issuer, logoFile, showOnly }) {
     return <Box marginY={1}><Text color="red">✖ {result.error}</Text></Box>;
   }
 
+  if (result.smtpTest) {
+    return (
+      <Box flexDirection="column" marginY={1}>
+        <Text color="green" bold>✔ Test email sent to {result.to}</Text>
+        {result.accepted?.length > 0 && <Text color="gray">  Accepted: {result.accepted.join(', ')}</Text>}
+        {result.messageId && <Text color="gray">  Message-ID: {result.messageId}</Text>}
+      </Box>
+    );
+  }
+
   const { cfg } = result;
 
   return (
@@ -71,6 +102,11 @@ export default function WorkspaceSettings({ issuer, logoFile, showOnly }) {
         <Text color="gray">  Workspace: <Text color="cyan">{getWorkspace()}</Text></Text>
         <Text color="gray">  Issuer:    <Text color="white">{cfg.issuerName || '(not set)'}</Text></Text>
         <Text color="gray">  Logo:      <Text color="white">{cfg.logo ? (cfg.logo.startsWith('data:') ? `data URL (${Math.round(cfg.logo.length / 1024)} KB)` : cfg.logo) : '(not set)'}</Text></Text>
+        {cfg.smtp?.host && (
+          <Text color="gray">  SMTP:      <Text color="white">{cfg.smtp.host}:{cfg.smtp.port || 587}</Text>
+            {cfg.smtp.user ? <Text color="gray">  user: {cfg.smtp.user}</Text> : null}
+          </Text>
+        )}
       </Box>
       {result.show && (
         <Box marginTop={1} flexDirection="column">
@@ -78,6 +114,12 @@ export default function WorkspaceSettings({ issuer, logoFile, showOnly }) {
           <Text color="gray">    <Text color="cyan">credcli workspace --issuer "Acme University"</Text></Text>
           <Text color="gray">    <Text color="cyan">credcli workspace --logo ./logo.png</Text></Text>
           <Text color="gray">    <Text color="cyan">credcli workspace --logo ""</Text>  (clear logo)</Text>
+          <Text color="gray">  Set SMTP:</Text>
+          <Text color="gray">    <Text color="cyan">credcli workspace --smtp-host mail.example.com --smtp-port 465 --smtp-secure</Text></Text>
+          <Text color="gray">    <Text color="cyan">credcli workspace --smtp-user you@example.com --smtp-pass secret</Text></Text>
+          <Text color="gray">    <Text color="cyan">credcli workspace --smtp-from "No Reply &lt;noreply@example.com&gt;"</Text></Text>
+          <Text color="gray">  Test SMTP:</Text>
+          <Text color="gray">    <Text color="cyan">credcli workspace --test you@example.com</Text></Text>
         </Box>
       )}
     </Box>

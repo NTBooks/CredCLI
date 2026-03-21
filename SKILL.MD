@@ -29,6 +29,10 @@ credcli workspace                              # show current values
 credcli workspace --issuer "Acme University"   # set issuer name
 credcli workspace --logo ./logo.png            # set logo (PNG/JPG/SVG → embedded base64 data URL)
 credcli workspace --logo ""                    # clear logo
+credcli workspace --smtp-host mail.example.com --smtp-port 465 --smtp-secure
+credcli workspace --smtp-user you@example.com --smtp-pass secret
+credcli workspace --smtp-from "No Reply <noreply@example.com>"
+credcli workspace --test you@example.com       # send test email to verify SMTP
 ```
 
 The values are stored in `.data/{tenant}/workspace.json`. They can also be set via the web UI under **Workspace Settings**.
@@ -139,9 +143,13 @@ Reading `mailmerge.csv` after `credcli new` gives you the exact column headers r
 |---------|---------|-----------|
 | `credcli register <url>` | Claim Chainletter token | |
 | `credcli register -i` | Show current token info | `-i` |
-| `credcli workspace` | Show issuer name + logo | |
+| `credcli workspace` | Show issuer name, logo, SMTP config | |
 | `credcli workspace --issuer <name>` | Set issuer name | `--issuer` |
 | `credcli workspace --logo <file>` | Set logo from image file | `--logo` |
+| `credcli workspace --smtp-host <h> --smtp-port <p> --smtp-secure` | Set SMTP server | `--smtp-host`, `--smtp-port`, `--smtp-secure` |
+| `credcli workspace --smtp-user <u> --smtp-pass <p>` | Set SMTP credentials | `--smtp-user`, `--smtp-pass` |
+| `credcli workspace --smtp-from <addr>` | Set from address | `--smtp-from` |
+| `credcli workspace --test <email>` | Send test email | `--test` |
 | `credcli templates` | List templates + their fields | |
 | `credcli new --template N` | Create job (non-interactive) | `--template N` (1-indexed) |
 | `credcli list` | List existing jobs + recipient counts | |

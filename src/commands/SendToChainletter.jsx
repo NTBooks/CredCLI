@@ -3,6 +3,7 @@ import { Box, Text, useApp, useInput } from 'ink';
 import fs from 'fs-extra';
 import path from 'path';
 import { listJobs, getTokenPath, checkTokenExpiry } from '../utils/jobs.js';
+import { uploadFilesToCollection } from '../utils/chainletter.js';
 
 export default function SendToChainletter({ jobArg, yes, no }) {
   const { exit } = useApp();
@@ -83,73 +84,29 @@ export default function SendToChainletter({ jobArg, yes, no }) {
 
         log(`Uploading ${files.length} file${files.length !== 1 ? 's' : ''} to collection "${collection.id}"…`);
 
-        let done = 0;
-        let skipped = 0;
-        const fileHashes = { ...meta.chainletterFileHashes }; // preserve any existing hashes
-
-        // Always upload a unique manifest so the collection has at least one new item
-        // (the server won't create the collection properly if every file already exists)
-        /* global __CREDCLI_VERSION__ */
-        const credcliVersion = typeof __CREDCLI_VERSION__ !== 'undefined' ? __CREDCLI_VERSION__ : 'dev';
-        const manifestFilename = `credcli-manifest-${Date.now()}.json`;
-        const manifestContent = JSON.stringify({
-          tool: 'credcli',
-          version: credcliVersion,
-          collectionId: collection.id,
-          collectionName: collection.name ?? collection.id,
-          jobId: job.jobId,
-          fileCount: files.length,
-          createdAt: new Date().toISOString(),
-        }, null, 2);
-        const manifestFormData = new FormData();
-        manifestFormData.append('file', new Blob([manifestContent], { type: 'application/json' }), manifestFilename);
-        const manifestResp = await fetch(token.webhookUrl, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token.jwt}`, 'group-id': collection.id },
-          body: manifestFormData,
-        });
-        const manifestResult = await manifestResp.json();
-        if (!manifestResult.success) {
-          log(`  ⚠ manifest upload: ${manifestResult.message}`, 'yellow');
-        } else {
-          if (manifestResult.hash) fileHashes[manifestFilename] = manifestResult.hash;
-          log(`  ✔ ${manifestFilename}  (manifest)`, 'green');
-        }
-
-        for (const filename of files) {
-          const filePath  = path.join(outDir, filename);
-          const ext       = path.extname(filename).toLowerCase();
-          const mime      = ext === '.png' ? 'image/png' : 'application/pdf';
-          const fileBuffer = await fs.readFile(filePath);
-
-          const formData = new FormData();
-          formData.append('file', new Blob([fileBuffer], { type: mime }), filename);
-
-          const r = await fetch(token.webhookUrl, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token.jwt}`, 'group-id': collection.id },
-            body: formData,
-          });
-          const result = await r.json();
-          done++;
-
-          const alreadyExists = !result.success && /already exists/i.test(result.message || '');
-          if (!result.success && !alreadyExists) throw new Error(`Upload failed for ${filename}: ${result.message}`);
-
-          if (result.hash) fileHashes[filename] = result.hash;
-
-          if (alreadyExists) {
-            skipped++;
-            log(`  ⟳ ${filename}  (already exists, skipped)`, 'yellow');
-          } else {
-            log(`  ✔ ${filename}${result.hash ? `  ${result.hash.slice(0, 12)}…` : ''}`, 'green');
-          }
-        }
+        const { fileHashes, done, skipped } = await uploadFilesToCollection(
+          token.webhookUrl,
+          collection.id,
+          token.jwt,
+          collection.network || 'private',
+          outDir,
+          collection.name ?? collection.id,
+          ({ filename, hash, skipped: isSkipped, success, message, manifest }) => {
+            if (manifest) {
+              if (!success) log(`  ⚠ manifest upload: ${message}`, 'yellow');
+              else log(`  ✔ ${filename}  (manifest)`, 'green');
+            } else if (isSkipped) {
+              log(`  ⟳ ${filename}  (already exists, skipped)`, 'yellow');
+            } else {
+              log(`  ✔ ${filename}${hash ? `  ${hash.slice(0, 12)}…` : ''}`, 'green');
+            }
+          },
+        );
 
         // Mark as sent and persist file hashes (claim links available after stamp via credcli stamp)
         meta.chainletterSent       = true;
         meta.chainletterSentAt     = new Date().toISOString();
-        meta.chainletterFileHashes = fileHashes;
+        meta.chainletterFileHashes = { ...meta.chainletterFileHashes, ...fileHashes };
         meta.chainletterClaimLinks = {};
         await fs.writeJson(jobMetaPath, meta, { spaces: 2 });
 

@@ -1,272 +1,10 @@
 import express from 'express';
 import archiver from 'archiver';
-import nodemailer from 'nodemailer';
+import { stampCollection, uploadFilesToCollection } from './utils/chainletter.js';
+import { resolveSmtp, sendEmailsFromMailMerge, testSmtp } from './utils/email.js';
 
 // Fields that are auto-injected at render time — never needed as CSV columns.
 const AUTO_INJECTED_FIELDS = new Set(['WorkspaceIssuer', 'WorkspaceLogo', 'VerificationURL', 'QRUrl', 'QR_CODE_IMAGE']);
-
-// ── Master placeholder list ───────────────────────────────────────────────────
-// Every field the renderer understands. New blank templates show all of these.
-export const ALL_FIELDS = [
-  // Core recipient
-  'FullName', 'FName', 'LName', 'Email',
-  // Credential metadata
-  'Title', 'CredentialID', 'Achievement', 'BadgeLevel',
-  // Organisation
-  'Institution', 'Issuer', 'Signature', 'Location',
-  // Dates
-  'IssueDate', 'ExpirationDate',
-  // Academic
-  'CourseName', 'Major', 'GPA', 'Hours',
-  // Verification (QRUrl and VerificationURL are set post-Chainletter stamp — not CSV fields)
-  // Misc
-  'Notes',
-  // Workspace-level identity (auto-injected from workspace.json at render time)
-  'WorkspaceIssuer', 'WorkspaceLogo',
-  // Transcript course rows (1–12)
-  ...Array.from({ length: 12 }, (_, i) => i + 1).flatMap(n => [
-    `Course${n}Name`, `Course${n}Grade`, `Course${n}Credits`, `Course${n}Semester`,
-  ]),
-];
-
-function generateBlankTemplate(name, width, height) {
-  const meta = JSON.stringify({
-    name,
-    description: 'Custom credential template',
-    width, height,
-    fields: ALL_FIELDS,
-  });
-
-  const courseRows = Array.from({ length: 12 }, (_, i) => i + 1).map(n => `
-        <tr class="course-row">
-          <td>{{Course${n}Name}}</td>
-          <td>{{Course${n}Grade}}</td>
-          <td>{{Course${n}Credits}}</td>
-          <td>{{Course${n}Semester}}</td>
-        </tr>`).join('');
-
-  return `<!--CREDCLI:${meta}-->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=${width}">
-<title>${name}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    width: ${width}px; min-height: ${height}px;
-    font-family: 'Inter', sans-serif;
-    background: #ffffff;
-    color: #1a1a2e;
-    font-size: 14px;
-  }
-  .page {
-    width: ${width}px; min-height: ${height}px;
-    padding: 48px 64px;
-    display: flex; flex-direction: column; gap: 0;
-  }
-  /* ── Section headers ─────────────────── */
-  .section {
-    margin-bottom: 24px;
-    padding: 16px 20px;
-    background: #f8f9fd;
-    border-left: 4px solid #1a237e;
-    border-radius: 4px;
-  }
-  .section-title {
-    font-size: 10px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: #6c757d; margin-bottom: 12px;
-  }
-  .field-row { display: flex; flex-wrap: wrap; gap: 16px; }
-  .field {
-    display: flex; flex-direction: column; gap: 3px; min-width: 160px;
-  }
-  .field-label {
-    font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
-    text-transform: uppercase; color: #aaa;
-  }
-  .field-value {
-    font-size: 14px; color: #1a237e;
-    font-family: 'Playfair Display', serif;
-    word-break: break-word;
-  }
-  .field-value.large {
-    font-size: 28px; font-style: italic;
-  }
-  .field-value.mono {
-    font-family: monospace; font-size: 11px; color: #888;
-  }
-  /* ── Course table ────────────────────── */
-  .course-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .course-table th {
-    background: #1a237e; color: white;
-    padding: 7px 12px; text-align: left;
-    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
-  }
-  .course-table td { padding: 7px 12px; border-bottom: 1px solid #eee; color: #555; }
-  .course-row:empty { display: none; }
-  .hint {
-    background: #fffbeb; border: 1px solid #fcd34d;
-    border-radius: 6px; padding: 10px 14px;
-    font-size: 11px; color: #92400e; line-height: 1.6;
-    margin-bottom: 20px;
-  }
-</style>
-</head>
-<body>
-<div class="page">
-
-  <div class="hint">
-    ✏️ <strong>This is your blank template.</strong>
-    Replace this layout with your own design.
-    Use <code>{{PLACEHOLDER_NAME}}</code> anywhere in the HTML to inject that field — including
-    <strong>custom ones you invent</strong> (e.g. <code>{{StudentID}}</code>, <code>{{Department}}</code>).
-    Every <code>{{TOKEN}}</code> you use is automatically added to the CSV when you save.
-    <code>{{WorkspaceLogo}}</code> and <code>{{WorkspaceIssuer}}</code> are auto-filled from your workspace settings.
-  </div>
-
-  <!-- ── Recipient ──────────────────────────────────── -->
-  <div class="section">
-    <div class="section-title">Recipient</div>
-    <div class="field-row">
-      <div class="field">
-        <div class="field-label">Full Name</div>
-        <div class="field-value large">{{FullName}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">First Name</div>
-        <div class="field-value">{{FName}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Last Name</div>
-        <div class="field-value">{{LName}}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Credential ─────────────────────────────────── -->
-  <div class="section">
-    <div class="section-title">Credential</div>
-    <div class="field-row">
-      <div class="field">
-        <div class="field-label">Title / Degree</div>
-        <div class="field-value">{{Title}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Achievement</div>
-        <div class="field-value">{{Achievement}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Badge Level</div>
-        <div class="field-value">{{BadgeLevel}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Credential ID</div>
-        <div class="field-value mono">{{CredentialID}}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Academic ────────────────────────────────────── -->
-  <div class="section">
-    <div class="section-title">Academic</div>
-    <div class="field-row">
-      <div class="field">
-        <div class="field-label">Course / Programme</div>
-        <div class="field-value">{{CourseName}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Major / Field</div>
-        <div class="field-value">{{Major}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">GPA</div>
-        <div class="field-value">{{GPA}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Hours / Credits</div>
-        <div class="field-value">{{Hours}}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Organisation ────────────────────────────────── -->
-  <div class="section">
-    <div class="section-title">Organisation — Workspace Identity (auto-injected from workspace settings)</div>
-    <div class="field-row">
-      <div class="field">
-        <div class="field-label">Workspace Issuer Name</div>
-        <div class="field-value">{{WorkspaceIssuer}}</div>
-      </div>
-      <div class="field" style="align-items:flex-start;">
-        <div class="field-label">Workspace Logo</div>
-        <img src="{{WorkspaceLogo}}" alt="Logo" style="height:48px;width:auto;max-width:120px;object-fit:contain;margin-top:4px;border:1px solid #e0e4f0;border-radius:4px;" onerror="this.style.display='none'">
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Per-row Organisation ──────────────────────── -->
-  <div class="section">
-    <div class="section-title">Per-row Organisation (from CSV)</div>
-    <div class="field-row">
-      <div class="field">
-        <div class="field-label">Institution</div>
-        <div class="field-value">{{Institution}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Issuer</div>
-        <div class="field-value">{{Issuer}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Signatory Title</div>
-        <div class="field-value">{{Signature}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Location</div>
-        <div class="field-value">{{Location}}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Dates ───────────────────────────────────────── -->
-  <div class="section">
-    <div class="section-title">Dates</div>
-    <div class="field-row">
-      <div class="field">
-        <div class="field-label">Issue Date</div>
-        <div class="field-value">{{IssueDate}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Expiration Date</div>
-        <div class="field-value">{{ExpirationDate}}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Notes</div>
-        <div class="field-value">{{Notes}}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Course table (transcript use) ──────────────── -->
-  <div class="section">
-    <div class="section-title">Course Rows (for transcripts — remove if not needed)</div>
-    <table class="course-table">
-      <thead>
-        <tr><th>Course Name</th><th>Grade</th><th>Credits</th><th>Semester</th></tr>
-      </thead>
-      <tbody>${courseRows}
-      </tbody>
-    </table>
-  </div>
-
-
-</div>
-</body>
-</html>`;
-}
 import 'dotenv/config';
 import multer from 'multer';
 import path from 'path';
@@ -276,8 +14,9 @@ import { randomUUID } from 'crypto';
 import {
   getWorkspace, getTemplatesDir, setWorkspace,
   listTemplates, listJobs, createJob,
-  parseTemplateMeta, getPackageTemplatesDir,
+  parseTemplateMeta,
   initTenantWorkspace, getDataDir,
+  createTemplate, resetTemplate,
 } from './utils/jobs.js';
 import { generateEmptyCSV, parseCSV, applyReplacements } from './utils/csv.js';
 import { renderJob, generateMailMergeFolder } from './utils/renderer.js';
@@ -422,13 +161,28 @@ export async function startServer(port = 3037) {
     res.json({ tenant: s.tenant, groupname: s.groupname, webhookUrl: s.webhookUrl, expires: s.expires });
   });
 
+  // Tenant stats proxy: returns credits/remaining stamps
+  app.get('/api/stats', auth, async (req, res) => {
+    const { jwt, webhookUrl } = req.chainSession;
+    try {
+      const r = await fetch(webhookUrl, { method: 'HEAD', headers: { Authorization: `Bearer ${jwt}` } });
+      const creditsHeader = r.headers.get('x-credits');
+      const parsedCredits = parseInt(creditsHeader, 10);
+      const credits = Number.isNaN(parsedCredits) ? null : parsedCredits;
+      return res.json({ success: true, credits, remaining: credits });
+    } catch (e) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   // ── Workspace settings ────────────────────────────────────────────────────────
   const getWsConfigPath = () => path.join(getWorkspace(), 'workspace.json');
+
 
   app.get('/api/workspace', auth, async (_req, res) => {
     try {
       const cfg = await fs.readJson(getWsConfigPath());
-      const smtp = cfg.smtp || {};
+      const smtp = resolveSmtp(cfg.smtp || {});
       res.json({
         issuerName: cfg.issuerName || '',
         logo: cfg.logo || '',
@@ -472,25 +226,13 @@ export async function startServer(port = 3037) {
     if (!to) return res.status(400).json({ error: 'to address required' });
     let cfg = {};
     try { cfg = await fs.readJson(getWsConfigPath()); } catch {}
-    const smtp = cfg.smtp || {};
+    const smtp = resolveSmtp(cfg.smtp || {});
     if (!smtp.host) return res.status(400).json({ error: 'SMTP host not configured' });
     if (!smtp.pass) return res.status(400).json({ error: 'SMTP password not set' });
-    const fromAddress = smtp.fromAddress || smtp.user || 'noreply@example.com';
     try {
-      const transporter = nodemailer.createTransport({
-        host: smtp.host,
-        port: Number(smtp.port) || 587,
-        secure: !!smtp.secure,
-        auth: { user: smtp.user, pass: smtp.pass },
-      });
-      await transporter.sendMail({
-        from: fromAddress,
-        to,
-        subject: 'CredCLI SMTP Test',
-        text: `This is a test email from CredCLI.\n\nSMTP host: ${smtp.host}\nFrom: ${fromAddress}`,
-        html: `<p>This is a test email from <strong>CredCLI</strong>.</p><p style="color:#888;font-size:12px">SMTP host: ${smtp.host} &nbsp;·&nbsp; From: ${fromAddress}</p>`,
-      });
-      res.json({ ok: true });
+      const info = await testSmtp(smtp, to);
+      if (process.env.DEBUG === 'true') console.log('[SMTP test] accepted:', info.accepted, '| rejected:', info.rejected, '| response:', info.response);
+      res.json({ ok: true, accepted: info.accepted, rejected: info.rejected, response: info.response, messageId: info.messageId });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
@@ -593,23 +335,23 @@ export async function startServer(port = 3037) {
   app.post('/api/templates', auth, (req, res) => {
     const { name, width = 1200, height = 900 } = req.body ?? {};
     if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
-    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const filename = `${slug}_${width}x${height}.html`;
-    const filePath = path.join(getTemplatesDir(), filename);
-    if (fs.existsSync(filePath)) return res.status(409).json({ error: `Template "${filename}" already exists` });
-    fs.writeFileSync(filePath, generateBlankTemplate(name.trim(), width, height), 'utf8');
-    res.json({ file: filename, name: name.trim(), width, height });
+    try {
+      const tmpl = createTemplate(name.trim(), width, height);
+      res.json({ file: tmpl.filename, name: tmpl.name, width: tmpl.width, height: tmpl.height });
+    } catch (e) {
+      if (e.message.includes('already exists')) return res.status(409).json({ error: e.message });
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.post('/api/templates/:name/reset', auth, (req, res) => {
-    let pkgPath, wsPath;
     try {
-      pkgPath = resolveTemplatePath(getPackageTemplatesDir(), req.params.name);
-      wsPath  = resolveTemplatePath(getTemplatesDir(), req.params.name);
-    } catch { return res.status(400).json({ error: 'Invalid file name' }); }
-    if (!fs.existsSync(pkgPath)) return res.status(404).json({ error: 'Original not found' });
-    fs.copySync(pkgPath, wsPath);
-    res.json({ ok: true, html: fs.readFileSync(wsPath, 'utf8') });
+      const html = resetTemplate(req.params.name);
+      res.json({ ok: true, html });
+    } catch (e) {
+      if (e.message.includes('not found')) return res.status(404).json({ error: e.message });
+      res.status(400).json({ error: e.message });
+    }
   });
 
   // ── Job routes ───────────────────────────────────────────────────────────────
@@ -844,34 +586,21 @@ export async function startServer(port = 3037) {
       const collection = meta.chainletterCollection;
       if (!collection) throw new Error('No Chainletter collection assigned to this job');
       const outputDir = path.join(job.jobDir, 'output');
-      // Only upload credential files — skip .eml and mail_merge outputs
-      const files = fs.readdirSync(outputDir)
-        .filter(f => !f.startsWith('_tmp') && f !== 'results.json' && /\.(pdf|png)$/i.test(f));
+      const files = fs.readdirSync(outputDir).filter(f => /\.(pdf|png)$/i.test(f));
       send({ type: 'start', total: files.length });
-      let done = 0;
-      const fileHashes = { ...meta.chainletterFileHashes }; // preserve any existing hashes
-      for (const filename of files) {
-        const filePath = path.join(outputDir, filename);
-        const ext = path.extname(filename).toLowerCase();
-        const mime = ext === '.png' ? 'image/png' : 'application/pdf';
-        const fileBuffer = await fs.readFile(filePath);
-        const formData = new FormData();
-        formData.append('file', new Blob([fileBuffer], { type: mime }), filename);
-        const r = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${jwt}`, 'group-id': collection.id, network: collection.network || 'private' },
-          body: formData,
-        });
-        const result = await r.json();
-        done++;
-        const alreadyExists = !result.success && /already exists/i.test(result.message || '');
-        if (!result.success && !alreadyExists) throw new Error(`Upload failed for ${filename}: ${result.message}`);
-        if (result.hash) fileHashes[filename] = result.hash;
-        send({ type: 'progress', done, total: files.length, file: filename, hash: result.hash ?? null, skipped: alreadyExists });
-      }
+      let progressDone = 0;
+      const { fileHashes } = await uploadFilesToCollection(
+        webhookUrl, collection.id, jwt, collection.network || 'private', outputDir, collection.name ?? collection.id,
+        ({ filename, hash, skipped, manifest }) => {
+          if (!manifest) {
+            progressDone++;
+            send({ type: 'progress', done: progressDone, total: files.length, file: filename, hash: hash ?? null, skipped });
+          }
+        },
+      );
 
       // Persist file hashes — claim links are fetched after stamp
-      meta.chainletterFileHashes = fileHashes;
+      meta.chainletterFileHashes = { ...meta.chainletterFileHashes, ...fileHashes };
       meta.chainletterClaimLinks = {};
       meta.chainletterSent = true;
       meta.chainletterSentAt = new Date().toISOString();
@@ -937,40 +666,19 @@ export async function startServer(port = 3037) {
 
     const wsPath = getWsConfigPath();
     const cfg = fs.existsSync(wsPath) ? await fs.readJson(wsPath) : {};
-    const smtp = cfg.smtp || {};
+    const smtp = resolveSmtp(cfg.smtp || {});
     if (!smtp.host) return res.status(400).json({ error: 'SMTP not configured' });
     if (!smtp.pass) return res.status(400).json({ error: 'SMTP password not set' });
 
     const mmDir = path.join(job.jobDir, 'output', 'mail_merge');
     if (!fs.existsSync(mmDir)) return res.status(400).json({ error: 'No mail_merge folder — generate emails first' });
 
-    const emlFiles = fs.readdirSync(mmDir).filter(f => f.endsWith('.eml'));
-    if (!emlFiles.length) return res.status(400).json({ error: 'No .eml files found' });
-
-    const transporter = nodemailer.createTransport({
-      host: smtp.host,
-      port: Number(smtp.port) || 587,
-      secure: !!smtp.secure,
-      auth: { user: smtp.user, pass: smtp.pass },
-    });
-
-    let sent = 0, skipped = 0;
-    const errors = [];
-    for (const file of emlFiles) {
-      const raw = fs.readFileSync(path.join(mmDir, file), 'utf8');
-      const toMatch = raw.match(/^To:\s*(.+)/mi);
-      const toHeader = toMatch ? toMatch[1].trim() : '';
-      const addrMatch = toHeader.match(/<([^>]+)>/) || toHeader.match(/([^\s,]+@[^\s,]+)/);
-      const toAddr = addrMatch ? addrMatch[1] : '';
-      if (!toAddr) { skipped++; continue; }
-      try {
-        await transporter.sendMail({ envelope: { from: smtp.fromAddress || smtp.user, to: toAddr }, raw });
-        sent++;
-      } catch (e) {
-        errors.push({ file, error: e.message });
-      }
+    try {
+      const { sent, skipped, errors } = await sendEmailsFromMailMerge(mmDir, smtp);
+      res.json({ ok: true, sent, skipped, errors });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
     }
-    res.json({ ok: true, sent, skipped, errors });
   });
 
   // Stamp the Chainletter collection (blockchain postmark)
@@ -983,37 +691,16 @@ export async function startServer(port = 3037) {
     if (!collection) return res.status(400).json({ error: 'No Chainletter collection assigned' });
     const { jwt, webhookUrl } = req.chainSession;
     try {
-      const r = await fetch(webhookUrl, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${jwt}`, 'group-id': collection.id, network: collection.network || 'private' },
-      });
-      const data = await r.json();
-      if (!data.success) throw new Error(data.message || 'Stamp failed');
+      const { filesStamped, claimLinks, verificationLinks } = await stampCollection(
+        webhookUrl, collection.id, jwt, collection.network || 'private',
+      );
       meta.chainletterStamped = true;
       meta.chainletterStampedAt = new Date().toISOString();
-
-      // Fetch claim links for the whole collection at once
-      const claimLinks = {};
-      const verificationLinks = {};
-      try {
-        const linksResp = await fetch(webhookUrl, {
-          headers: { Authorization: `Bearer ${jwt}`, 'group-id': collection.id, 'export-links': 'true' },
-        });
-        const linksData = await linksResp.json();
-        const permalinks = linksData.export_data?.permalinks ?? [];
-        for (const { filename, shorturl, url, cid } of permalinks) {
-          const link = shorturl ?? url;
-          if (filename && link) {
-            claimLinks[filename] = link;
-            if (cid) verificationLinks[filename] = `${new URL(link).origin}/pverify/${cid}`;
-          }
-        }
-      } catch {}
       meta.chainletterClaimLinks = claimLinks;
       meta.chainletterVerificationLinks = verificationLinks;
 
       await fs.writeJson(jobMetaPath, meta, { spaces: 2 });
-      res.json({ ok: true, filesStamped: data.files_stamped, claimLinks });
+      res.json({ ok: true, filesStamped, claimLinks });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
