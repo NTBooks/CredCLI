@@ -171,9 +171,9 @@
 
   <div class="header">
     <div class="header-left">
-      <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:40px;width:auto;max-width:160px;object-fit:contain;margin-bottom:6px;" onerror="this.style.display='none'">
+      <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin-bottom:6px;" onerror="this.style.display='none'">
       <div class="institution">{{WorkspaceIssuer}}</div>
-      <div class="location">{{Location}}</div>
+      <div class="location opt">{{Location}}</div>
       <div class="doc-title">Official Academic Transcript</div>
     </div>
     <div class="header-right">
@@ -245,11 +245,11 @@
     <div class="official-note">
       This is an official document issued by {{Institution}}.<br>
       Any alteration renders this transcript invalid.<br>
-      Valid through {{ExpirationDate}}.
+      <span id="expiryLine">Valid through {{ExpirationDate}}.</span>
       <div style="margin-top:10px;">
         <a href="https://chainletterlabs.com" target="_blank" style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
-          <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#555;white-space:nowrap;">Powered by</span>
-          <svg height="14" width="116" viewBox="0 0 1220 148" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;display:block;vertical-align:middle;">
+          <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#6167c9;white-space:nowrap;">Powered by</span>
+          <svg height="16" width="131" viewBox="0 0 1220 148" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;display:block;vertical-align:middle;">
     <g transform="matrix(4.16667,0,0,4.16667,142.104,0)">
         <g>
             <path d="M0,27.3L-34.105,0L34.105,0L0,27.3Z" style="fill:rgb(85,177,227);fill-rule:nonzero;"/>
@@ -300,13 +300,24 @@
     </g>
 </svg>
 
-          <span style="font-size:7px;font-family:sans-serif;color:#555;white-space:nowrap;">&nbsp;&middot;&nbsp;Tamper-evident credential delivery</span>
+          <span style="font-size:7px;font-family:sans-serif;color:#6167c9;white-space:nowrap;">&nbsp;&middot;&nbsp;Tamper-evident credential delivery</span>
         </a>
       </div>
     </div>
   </div>
 </div>
 
+<script>
+  // Hide empty optional elements
+  document.querySelectorAll('.opt').forEach(el => {
+    if (!el.textContent.trim()) el.style.display = 'none';
+  });
+  // Hide "Valid through" line if ExpirationDate is blank
+  const expiryLine = document.getElementById('expiryLine');
+  if (expiryLine && expiryLine.textContent.replace('Valid through','').replace('.','').trim() === '') {
+    expiryLine.style.display = 'none';
+  }
+</script>
 <script>
   const courses = [
     {name:'{{Course1Name}}',  grade:'{{Course1Grade}}',  credits:'{{Course1Credits}}',  sem:'{{Course1Semester}}'},

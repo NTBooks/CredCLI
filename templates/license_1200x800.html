@@ -1,0 +1,249 @@
+<!--CREDCLI:{"name":"Professional License","description":"Official professional license issued by a regulatory or certifying authority","width":1200,"height":800,"fields":["FullName","Title","Major","Institution","Issuer","IssueDate","ExpirationDate","CredentialID","Achievement","Signature","Location","Notes","QRUrl","VerificationURL","WorkspaceLogo","WorkspaceIssuer"]}-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>Professional License</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body { width: 1200px; height: 800px; overflow: hidden; font-family: 'Inter', sans-serif; color: #111827; }
+
+  .page {
+    width: 1200px; height: 800px;
+    position: relative;
+    background: #ffffff;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Chainletter accent stripes */
+  .cl-stripe { height: 3px; background: linear-gradient(to right, #6167c9, #5756a6); flex-shrink: 0; }
+
+  /* Header */
+  .header {
+    background: #1e1e2e;
+    padding: 20px 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .header-brand { display: flex; align-items: center; gap: 16px; }
+  .header-text { display: flex; flex-direction: column; }
+  .header-org {
+    color: white; font-size: 16px; font-weight: 700;
+    letter-spacing: -0.02em; line-height: 1.2;
+  }
+  .header-location { color: rgba(255,255,255,0.45); font-size: 11px; margin-top: 2px; letter-spacing: 0.02em; }
+  .doc-type-badge {
+    background: rgba(97,103,201,0.2);
+    border: 1px solid rgba(97,103,201,0.45);
+    border-radius: 128px;
+    padding: 7px 22px;
+    color: #a5b4fc;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  /* Body */
+  .body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    overflow: hidden;
+  }
+
+  .body-main {
+    padding: 36px 56px 28px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    border-right: 1px solid #e5e7eb;
+  }
+
+  .certifies-label {
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #9ca3af; margin-bottom: 10px;
+  }
+
+  .recipient-name {
+    font-size: 52px; font-weight: 900;
+    color: #111827; letter-spacing: -0.04em;
+    line-height: 0.95; margin-bottom: 10px;
+  }
+
+  .license-title {
+    font-size: 19px; font-weight: 500; color: #6167c9;
+    letter-spacing: -0.01em; margin-bottom: 4px;
+  }
+
+  .license-specialty {
+    font-size: 14px; font-weight: 400; color: #6b7280;
+    letter-spacing: -0.01em;
+  }
+
+  .achievement-block {
+    font-size: 13px; color: #9ca3af;
+    line-height: 1.65; margin-top: 14px;
+    font-style: italic;
+    padding-left: 12px;
+    border-left: 2px solid #e5e7eb;
+    max-width: 540px;
+  }
+
+  /* Footer row inside body-main */
+  .footer-row {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding-top: 20px;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .dates-group { display: flex; gap: 48px; }
+  .date-cell { display: flex; flex-direction: column; gap: 3px; }
+  .date-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #9ca3af;
+  }
+  .date-value { font-size: 14px; font-weight: 600; color: #111827; }
+
+  .sig-block { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+  .sig-line { width: 150px; height: 1px; background: #1e1e2e; margin-bottom: 4px; }
+  .sig-name { font-size: 12px; font-weight: 700; color: #111827; }
+  .sig-role { font-size: 10px; color: #9ca3af; }
+
+  /* Aside panel */
+  .body-aside {
+    background: #f8f9fc;
+    padding: 36px 28px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    align-items: center;
+  }
+
+  .license-no-section { width: 100%; }
+  .license-no-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: #9ca3af; margin-bottom: 8px;
+  }
+  .license-no-box {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px; font-weight: 700;
+    color: #1e1e2e;
+    letter-spacing: 0.05em;
+    word-break: break-all;
+    line-height: 1.6;
+    border-left: 3px solid #6167c9;
+  }
+
+  .institution-section { width: 100%; margin-top: 20px; }
+  .institution-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #9ca3af; margin-bottom: 5px;
+  }
+  .institution-value { font-size: 12px; font-weight: 600; color: #374151; line-height: 1.4; }
+
+  /* Official seal ring */
+  .seal-ring {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    border: 2px solid #6167c9;
+    background: rgba(97,103,201,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* CL attribution */
+  .cl-attr { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+
+  .opt { display: block; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="cl-stripe"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-brand">
+      <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:52px;width:auto;max-width:180px;object-fit:contain;" onerror="this.style.display='none'">
+      <div class="header-text">
+        <div class="header-org">{{WorkspaceIssuer}}</div>
+        <div class="header-location opt">{{Location}}</div>
+      </div>
+    </div>
+    <div class="doc-type-badge">Professional License</div>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+    <div class="body-main">
+      <div>
+        <div class="certifies-label">This certifies that</div>
+        <div class="recipient-name">{{FullName}}</div>
+        <div class="license-title">{{Title}}</div>
+        <div class="license-specialty opt">{{Major}}</div>
+        <div class="achievement-block opt">{{Achievement}}</div>
+      </div>
+
+      <div class="footer-row">
+        <div class="dates-group">
+          <div class="date-cell">
+            <div class="date-label">Date Issued</div>
+            <div class="date-value">{{IssueDate}}</div>
+          </div>
+          <div class="date-cell opt" id="expiryCell">
+            <div class="date-label">Expires</div>
+            <div class="date-value" id="expiryVal">{{ExpirationDate}}</div>
+          </div>
+        </div>
+        <div class="sig-block">
+          <div class="sig-line"></div>
+          <div class="sig-name">{{Issuer}}</div>
+          <div class="sig-role opt">{{Signature}}</div>
+        </div>
+        <a class="cl-attr" href="https://chainletterlabs.com" target="_blank">
+          <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#6167c9;white-space:nowrap;">Powered by</span>
+          <svg height="14" width="116" viewBox="0 0 1220 148" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;display:block;vertical-align:middle;"><g transform="matrix(4.16667,0,0,4.16667,142.104,0)"><path d="M0,27.3L-34.105,0L34.105,0L0,27.3Z" style="fill:rgb(85,177,227);"/></g><g transform="matrix(4.16667,0,0,4.16667,142.104,147.657)"><path d="M0,-27.3L-34.105,0L34.105,0L0,-27.3Z" style="fill:rgb(85,177,227);"/></g><g transform="matrix(4.16667,0,0,4.16667,373.779,105.98)"><path d="M0,-15.654L-4.939,-13.374C-5.889,-15.198 -7.409,-16.261 -9.803,-16.261C-13.792,-16.261 -16.072,-12.766 -16.072,-7.827C-16.072,-3.04 -13.754,0.608 -9.765,0.608C-7.371,0.608 -5.965,-0.418 -4.56,-2.774L-0.076,-0.114C-1.9,3.648 -5.091,5.889 -9.917,5.889C-16.87,5.889 -21.543,0.57 -21.543,-7.827C-21.543,-15.92 -16.68,-21.543 -9.727,-21.543C-4.711,-21.543 -1.672,-19.111 0,-15.654" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,473.685,17.9596)"><path d="M0,26.596L-5.319,26.596L-5.319,15.426L-16.224,15.426L-16.224,26.596L-21.543,26.596L-21.543,0L-16.224,0L-16.224,10.183L-5.319,10.183L-5.319,0L0,0L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,548.046,63.7117)"><path d="M0,4.635L-1.71,-0.19C-2.242,-1.748 -2.774,-3.344 -3.04,-4.332C-3.306,-3.344 -3.838,-1.748 -4.37,-0.19L-6.079,4.635L0,4.635ZM9.763,15.615L3.913,15.615L1.823,9.689L-7.903,9.689L-9.993,15.615L-15.692,15.615L-5.51,-10.98L-0.343,-10.98L9.763,15.615Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(-4.16667,0,0,4.16667,1912.99,-2577.28)"><rect x="310.152" y="622.858" width="5.318" height="26.596" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,729.245,17.9596)"><path d="M0,26.596L-4.749,26.596L-14.514,12.082C-15.159,11.094 -16.033,9.765 -16.375,9.08C-16.375,10.069 -16.299,13.412 -16.299,14.894L-16.299,26.596L-21.542,26.596L-21.542,0L-16.451,0L-7.028,14.058C-6.383,15.046 -5.509,16.375 -5.167,17.06C-5.167,16.072 -5.243,12.728 -5.243,11.246L-5.243,0L0,0L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,809.889,17.9596)"><path d="M0,26.596L-14.894,26.596L-14.894,0L-13.146,0L-13.146,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,887.848,17.9596)"><path d="M0,26.596L-15.615,26.596L-15.615,0L-0.569,0L-0.569,1.596L-13.867,1.596L-13.867,11.626L-5.812,11.626L-5.812,13.222L-13.867,13.222L-13.867,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,971.482,122.126)"><path d="M0,-23.404L-8.245,-23.404L-8.245,1.596L-9.993,1.596L-9.993,-23.404L-18.237,-23.404L-18.237,-25L0,-25L0,-23.404Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1056.35,122.126)"><path d="M0,-23.404L-8.245,-23.404L-8.245,1.596L-9.993,1.596L-9.993,-23.404L-18.237,-23.404L-18.237,-25L0,-25L0,-23.404Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1134.07,17.9596)"><path d="M0,26.596L-15.615,26.596L-15.615,0L-0.569,0L-0.569,1.596L-13.867,1.596L-13.867,11.626L-5.812,11.626L-5.812,13.222L-13.867,13.222L-13.867,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1212.11,98.3812)"><path d="M0,-12.006C0,-16.11 -2.583,-17.705 -6.877,-17.705L-13.943,-17.705L-13.943,-6.117L-7.333,-6.117C-2.545,-6.117 0,-7.941 0,-12.006M1.748,-12.044C1.748,-7.827 -0.76,-5.434 -4.825,-4.749L1.292,7.295L-0.722,7.295L-6.687,-4.522L-13.943,-4.522L-13.943,7.295L-15.691,7.295L-15.691,-19.301L-6.801,-19.301C-1.861,-19.301 1.748,-17.287 1.748,-12.044" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,144.104,-1.13687e-13)"><path d="M11.969,17.719L0,27.3L-11.969,17.719L0,8.138L11.969,17.719Z" style="fill:rgb(0,148,212);"/></g></svg>
+          <span style="font-size:7px;font-family:sans-serif;color:#6167c9;white-space:nowrap;">&nbsp;&middot;&nbsp;Blockchain-verified</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Aside -->
+    <div class="body-aside">
+      <div class="license-no-section">
+        <div class="license-no-label">License No.</div>
+        <div class="license-no-box">{{CredentialID}}</div>
+        <div class="institution-section opt">
+          <div class="institution-label" style="margin-top:16px;">Issuing Authority</div>
+          <div class="institution-value">{{Institution}}</div>
+        </div>
+      </div>
+      <div class="seal-ring">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="18" cy="18" r="14" stroke="#6167c9" stroke-width="1.5" fill="none"/>
+          <circle cx="18" cy="18" r="10" stroke="#6167c9" stroke-width="0.75" stroke-dasharray="2 2" fill="none"/>
+          <path d="M18 8L19.8 14H26L20.9 17.8L22.7 24L18 20.6L13.3 24L15.1 17.8L10 14H16.2L18 8Z" fill="#6167c9" opacity="0.5"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="cl-stripe"></div>
+</div>
+
+<script>
+  document.querySelectorAll('.opt').forEach(el => {
+    if (!el.textContent.trim()) el.style.display = 'none';
+  });
+  const expiryVal = document.getElementById('expiryVal');
+  if (expiryVal && !expiryVal.textContent.trim()) {
+    document.getElementById('expiryCell').style.display = 'none';
+  }
+</script>
+</body>
+</html>

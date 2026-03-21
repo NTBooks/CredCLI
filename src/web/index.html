@@ -11,7 +11,7 @@
 <style>
 :root {
   --navy:  #6167c9;
-  --gold:  #c9a84c;
+  --gold:  #6167c9;
   --bg:    #ededed;
   --card:  #fafafa;
   --text:  #383838;
@@ -47,7 +47,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .ti-label { color:var(--muted); font-weight:600; font-size:11px; letter-spacing:.5px; text-transform:uppercase; }
 .ti-val { color:var(--navy); font-weight:500; text-align:right; word-break:break-all; max-width:200px; }
 .ti-val.expires-soon { color:#b65244; }
-.btn-enter { background: var(--gold); color: #1a1a2e; border: none; padding: 10px; font-weight: 700; font-size: 14px; border-radius: 128px; width: 100%; cursor: pointer; transition: background .2s; margin-top: 4px; }
+.btn-enter { background: var(--gold); color: white; border: none; padding: 10px; font-weight: 700; font-size: 14px; border-radius: 128px; width: 100%; cursor: pointer; transition: background .2s; margin-top: 4px; }
 .btn-enter:hover { background: #b8973e; }
 
 /* ── App shell ───────────────────────────────── */
@@ -254,7 +254,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 /* ── Buttons ─────────────────────────────────── */
 .btn-primary-cred { background: var(--navy); color: white; border: none; padding: 8px 18px; border-radius: 128px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; display: inline-flex; align-items: center; gap: 6px; }
 .btn-primary-cred:hover { background: #5756a6; }
-.btn-gold { background: var(--gold); color: #1a1a2e; border: none; padding: 8px 18px; border-radius: 128px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-gold { background: var(--gold); color: white; border: none; padding: 8px 18px; border-radius: 128px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; display: inline-flex; align-items: center; gap: 6px; }
 .btn-gold:hover { opacity: 0.85; }
 .btn-outline-cred { background: var(--card); color: var(--navy); border: 1px solid var(--navy); padding: 7px 16px; border-radius: 128px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
 .btn-outline-cred:hover { background: var(--navy); color: white; }
@@ -266,7 +266,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .badge-cred { padding: 4px 6px; border-radius: 6px; font-size: 11px; font-weight: 400; display: inline-block; }
 .badge-green { background: #daf5d6; color: #3a7f3b; }
 .badge-yellow { background: #ffecba; color: #8b6d2d; }
-.badge-gold { background: #ffecba; color: #8b6d2d; }
+.badge-gold { background: #ecedfc; color: #5756a6; }
 .badge-blue { background: #ecedfc; color: #6167c9; }
 .badge-gray { background: #ededed; color: #5f5f5f; }
 .badge-navy { background: #ecedfc; color: var(--navy); }
@@ -362,7 +362,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
   <aside id="sidebar">
     <div class="sb-brand">
       <a href="https://chainletterlabs.com" target="_blank" style="display:block;margin-bottom:10px;">
-        <img src="/CL-Logo-White-Cropped.png" alt="Chainletter Labs" style="height:60px;width:auto;display:block;opacity:0.85;">
+        <img src="/CL-Logo-White-Cropped.png" alt="Chainletter Labs" style="max-height:21px;width:auto;display:block;opacity:0.85;">
       </a>
       <div class="sb-brand-name">Cred<span>CLI</span></div>
       <div class="sb-brand-ver">v0.1.0 · web ui</div>
@@ -424,6 +424,8 @@ const S = {
   groupname:  _saved?.groupname  || '',
   webhookUrl: _saved?.webhookUrl || '',
   expires:    _saved?.expires    || null,
+  wsLogo:     '',
+  wsIssuer:   '',
 };
 let _editor = null; // active CodeMirror instance
 let _currentTemplate = null; // { width, height, file }
@@ -540,6 +542,8 @@ async function loadWorkspaceIdentity() {
     const ws = await API.get('/api/workspace');
     const logoCell = document.getElementById('sb-ws-logo-cell');
     const issuerEl = document.getElementById('sb-ws-issuer');
+    S.wsLogo   = ws.logo       || '';
+    S.wsIssuer = ws.issuerName || '';
     if (ws.logo) {
       logoCell.innerHTML = `<img src="${ws.logo}" alt="logo">`;
     } else {
@@ -646,7 +650,7 @@ async function renderDashboard() {
 
   <div class="stat-grid">
     <div class="stat-card"><div class="s-val">${templates.length}</div><div class="s-lbl">Templates</div></div>
-    <div class="stat-card gold"><div class="s-val">${jobs.length}</div><div class="s-lbl">Total Jobs</div></div>
+    <div class="stat-card"><div class="s-val">${jobs.length}</div><div class="s-lbl">Total Jobs</div></div>
     <div class="stat-card green"><div class="s-val">${readyJobs.length}</div><div class="s-lbl">Jobs Ready to Run</div></div>
     <div class="stat-card blue"><div class="s-val">${completedJobs.length}</div><div class="s-lbl">Completed Jobs</div></div>
   </div>
@@ -700,7 +704,7 @@ async function renderTemplates() {
     return `
     <div class="tmpl-card">
       <div class="tmpl-preview-wrap">
-        <iframe src="/api/templates/${encodeURIComponent(t.file)}/raw"
+        <iframe src="/api/templates/${encodeURIComponent(t.file)}/preview"
                 style="width:${t.width}px;height:${t.height}px;transform:scale(${scale.toFixed(4)});"
                 loading="lazy" title="${t.name} preview"></iframe>
       </div>
@@ -749,13 +753,24 @@ async function renderTemplates() {
         </div>
         <div>
           <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">Canvas Size</label>
-          <select id="new-tmpl-size" class="form-control" style="font-size:14px">
+          <select id="new-tmpl-size" class="form-control" style="font-size:14px" onchange="onNewTmplSizeChange()">
             <option value="1200x900">1200 × 900 — Landscape certificate (default)</option>
             <option value="1200x1600">1200 × 1600 — Portrait / transcript</option>
             <option value="900x1200">900 × 1200 — Portrait certificate</option>
             <option value="600x600">600 × 600 — Square badge</option>
             <option value="800x600">800 × 600 — Compact card</option>
+            <option value="custom">Custom…</option>
           </select>
+        </div>
+        <div id="new-tmpl-custom-size" style="display:none;flex-direction:row;gap:10px">
+          <div style="flex:1">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">Width (px)</label>
+            <input id="new-tmpl-width" class="form-control" type="number" min="100" max="9999" placeholder="e.g. 1200" style="font-size:14px">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">Height (px)</label>
+            <input id="new-tmpl-height" class="form-control" type="number" min="100" max="9999" placeholder="e.g. 900" style="font-size:14px">
+          </div>
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:22px;justify-content:flex-end">
@@ -910,11 +925,17 @@ async function renderTemplateEditor(templateFile) {
   }
 }
 
+function applyWsVars(html) {
+  if (S.wsLogo)   html = html.replace(/\{\{WorkspaceLogo\}\}/g,   S.wsLogo);
+  if (S.wsIssuer) html = html.replace(/\{\{WorkspaceIssuer\}\}/g, S.wsIssuer);
+  return html;
+}
+
 function updatePreview(html) {
   const iframe = document.getElementById('preview-iframe');
   if (!iframe) return;
   const prev = iframe.src;
-  const blob = new Blob([html], { type: 'text/html' });
+  const blob = new Blob([applyWsVars(html)], { type: 'text/html' });
   iframe.src = URL.createObjectURL(blob);
   iframe.onload = () => { if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev); };
 }
@@ -1019,7 +1040,7 @@ async function renderNewJob() {
     <div class="tmpl-card" id="sel-tmpl-${i}" onclick="selectTemplate(${i})"
          style="cursor:pointer;border:2px solid transparent;transition:border .15s;">
       <div class="tmpl-preview-wrap" style="height:165px;">
-        <iframe src="/api/templates/${encodeURIComponent(t.file)}/raw"
+        <iframe src="/api/templates/${encodeURIComponent(t.file)}/preview"
                 style="width:${t.width}px;height:${t.height}px;transform:scale(${scale.toFixed(4)});"
                 loading="lazy"></iframe>
       </div>
@@ -1887,25 +1908,50 @@ window.stampChainletter = stampChainletter;
 // ── New Template modal ────────────────────────────────────────────────────────
 function showNewTemplateModal() {
   const m = document.getElementById('new-tmpl-modal');
-  if (m) { m.style.display = 'flex'; document.getElementById('new-tmpl-name').focus(); }
+  if (m) {
+    m.style.display = 'flex';
+    document.getElementById('new-tmpl-name').value = '';
+    document.getElementById('new-tmpl-size').value = '1200x900';
+    document.getElementById('new-tmpl-custom-size').style.display = 'none';
+    document.getElementById('new-tmpl-width').value = '';
+    document.getElementById('new-tmpl-height').value = '';
+    document.getElementById('new-tmpl-err').style.display = 'none';
+    document.getElementById('new-tmpl-name').focus();
+  }
 }
 function hideNewTemplateModal() {
   const m = document.getElementById('new-tmpl-modal');
   if (m) m.style.display = 'none';
 }
+function onNewTmplSizeChange() {
+  const isCustom = document.getElementById('new-tmpl-size').value === 'custom';
+  document.getElementById('new-tmpl-custom-size').style.display = isCustom ? 'flex' : 'none';
+}
 window.showNewTemplateModal = showNewTemplateModal;
 window.hideNewTemplateModal = hideNewTemplateModal;
+window.onNewTmplSizeChange = onNewTmplSizeChange;
 
 async function createNewTemplate() {
   const name = document.getElementById('new-tmpl-name')?.value?.trim();
-  const size = document.getElementById('new-tmpl-size')?.value || '1200x900';
+  const sizeVal = document.getElementById('new-tmpl-size')?.value || '1200x900';
   const errEl = document.getElementById('new-tmpl-err');
   const btn   = document.getElementById('create-tmpl-btn');
 
   if (!name) { errEl.textContent = 'Please enter a template name.'; errEl.style.display = 'block'; return; }
-  errEl.style.display = 'none';
 
-  const [width, height] = size.split('x').map(Number);
+  let width, height;
+  if (sizeVal === 'custom') {
+    width  = parseInt(document.getElementById('new-tmpl-width')?.value, 10);
+    height = parseInt(document.getElementById('new-tmpl-height')?.value, 10);
+    if (!width || !height || width < 100 || height < 100) {
+      errEl.textContent = 'Please enter valid width and height (minimum 100px each).';
+      errEl.style.display = 'block';
+      return;
+    }
+  } else {
+    [width, height] = sizeVal.split('x').map(Number);
+  }
+  errEl.style.display = 'none';
   btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating…';
 
   try {

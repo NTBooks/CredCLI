@@ -42,7 +42,7 @@ const cli = meow(`
 
   Options
     --template,        -t  Template number or name (for "new")
-    --format,          -f  Output format: pdf (default) or png (for "run")
+    --format,          -f  Output format: png (default) or pdf (for "run")
     --limit,           -l  Render only the first N rows (for "run"), useful for testing
     --resume               Skip rows whose output file already exists (for "run")
     --port,            -p  Port for the web server (default: 3037)
@@ -132,7 +132,7 @@ const cli = meow(`
   importMeta: import.meta,
   flags: {
     template: { type: 'string',  shortFlag: 't' },
-    format:   { type: 'string',  shortFlag: 'f', default: 'pdf' },
+    format:   { type: 'string',  shortFlag: 'f', default: 'png' },
     limit:    { type: 'number',  shortFlag: 'l', default: 0 },
     resume:   { type: 'boolean', default: false },
     row:      { type: 'number',  default: 1 },

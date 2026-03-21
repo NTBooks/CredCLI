@@ -188,23 +188,23 @@
   <!-- Sidebar -->
   <div class="sidebar">
     <div>
-      <div class="sidebar-logo">
-        <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:56px;width:auto;max-width:140px;object-fit:contain;" onerror="this.style.display='none'">
+      <div class="sidebar-logo" id="sidebarLogoWrap">
+        <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" id="sidebarLogoImg" style="height:56px;width:auto;max-width:140px;object-fit:contain;" onerror="this.style.display='none';document.getElementById('sidebarLogoWrap').style.display='none'">
       </div>
       <div class="sidebar-institution">{{WorkspaceIssuer}}</div>
-      <div class="sidebar-location">{{Location}}</div>
+      <div class="sidebar-location opt">{{Location}}</div>
     </div>
 
     <div class="stats">
-      <div class="stat-item">
+      <div class="stat-item" id="statHours">
         <div class="stat-label">Duration</div>
         <div class="stat-value">{{Hours}} hrs</div>
       </div>
-      <div class="stat-item">
+      <div class="stat-item" id="statGPA">
         <div class="stat-label">Score / GPA</div>
         <div class="stat-value">{{GPA}}</div>
       </div>
-      <div class="stat-item">
+      <div class="stat-item" id="statMajor">
         <div class="stat-label">Field</div>
         <div class="stat-value" style="font-size:14px;">{{Major}}</div>
       </div>
@@ -216,14 +216,13 @@
   <div class="main">
     <div>
       <div class="cert-label">Certificate of Completion</div>
-      <div class="cert-title">This certifies that</div>
+      <div class="cert-title">This is to certify that</div>
 
-      <div class="cert-body">the following individual has successfully completed</div>
       <div class="recipient-name">{{FullName}}</div>
 
       <div class="course-completed-label">has successfully completed</div>
       <div class="course-name">{{CourseName}}</div>
-      <div class="achievement-note">{{Achievement}}</div>
+      <div class="achievement-note opt">{{Achievement}}</div>
 
       <div class="progress-section">
         <div class="progress-label">Course completion</div>
@@ -239,7 +238,7 @@
       </div>
       <div style="display:flex;align-items:flex-end;padding-bottom:4px;">
         <a href="https://chainletterlabs.com" target="_blank" style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
-          <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#555;white-space:nowrap;">Powered by</span>
+          <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#6167c9;white-space:nowrap;">Powered by</span>
           <svg height="14" width="116" viewBox="0 0 1220 148" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;display:block;vertical-align:middle;">
     <g transform="matrix(4.16667,0,0,4.16667,142.104,0)">
         <g>
@@ -291,7 +290,7 @@
     </g>
 </svg>
 
-          <span style="font-size:7px;font-family:sans-serif;color:#555;white-space:nowrap;">&nbsp;&middot;&nbsp;Tamper-evident credential delivery</span>
+          <span style="font-size:7px;font-family:sans-serif;color:#6167c9;white-space:nowrap;">&nbsp;&middot;&nbsp;Tamper-evident credential delivery</span>
         </a>
       </div>
       <div class="date-issued">
@@ -301,5 +300,19 @@
     </div>
   </div>
 </div>
+<script>
+  // Hide empty optional elements
+  document.querySelectorAll('.opt').forEach(el => {
+    if (!el.textContent.trim()) el.style.display = 'none';
+  });
+  // Hide stat items when their value is blank or only units
+  ['statHours','statGPA','statMajor'].forEach(id => {
+    const item = document.getElementById(id);
+    if (!item) return;
+    const val = item.querySelector('.stat-value');
+    const raw = val ? val.textContent.replace(/hrs/g,'').trim() : '';
+    if (!raw) item.style.display = 'none';
+  });
+</script>
 </body>
 </html>

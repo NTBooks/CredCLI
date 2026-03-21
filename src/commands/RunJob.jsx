@@ -6,7 +6,7 @@ import { listJobs, getJobsDir } from '../utils/jobs.js';
 import { renderJob } from '../utils/renderer.js';
 import path from 'path';
 
-export default function RunJob({ preselect, format = 'pdf', limit = 0, resume = false }) {
+export default function RunJob({ preselect, format = 'png', limit = 0, resume = false }) {
   const { exit } = useApp();
   const jobs = listJobs();
   const [phase, setPhase] = useState(preselect != null ? 'running' : 'select');

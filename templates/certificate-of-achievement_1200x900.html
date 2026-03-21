@@ -92,8 +92,8 @@
   }
   .institution-name {
     font-family: 'Raleway', sans-serif;
-    font-size: 13px; font-weight: 800;
-    letter-spacing: 4px;
+    font-size: 15px; font-weight: 800;
+    letter-spacing: 3px;
     text-transform: uppercase;
     color: #8b1a1a;
   }
@@ -244,9 +244,9 @@
 
   <div class="content">
     <div class="top-brand">
-      <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:48px;width:auto;max-width:120px;object-fit:contain;margin-bottom:6px;" onerror="this.style.display='none'">
+      <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:60px;width:auto;max-width:150px;object-fit:contain;margin-bottom:6px;" onerror="this.style.display='none'">
       <div class="institution-name">{{WorkspaceIssuer}}</div>
-      <div class="location-text">{{Location}}</div>
+      <div class="location-text opt">{{Location}}</div>
     </div>
 
     <div class="gold-rule"></div>
@@ -257,20 +257,18 @@
     <div class="presented-to">Presented to</div>
     <div class="recipient-name">{{FullName}}</div>
 
-    <div class="for-label">In recognition of</div>
-    <div class="achievement-text">{{Achievement}}</div>
+    <div class="for-label opt" id="achieveWrap">In recognition of</div>
+    <div class="achievement-text opt">{{Achievement}}</div>
 
-    <div class="title-line">{{CourseName}}</div>
+    <div class="title-line opt">{{CourseName}}</div>
 
-    <div class="level-badge">
-      ★ {{BadgeLevel}} Award
-    </div>
+    <div class="level-badge opt">★ {{BadgeLevel}} Award</div>
 
     <div class="bottom-row">
       <div class="sig-block">
         <div class="sig-line"></div>
         <div class="sig-name">{{Issuer}}</div>
-        <div class="sig-title">{{Signature}}</div>
+        <div class="sig-title opt">{{Signature}}</div>
       </div>
 
       <div class="centre-meta">
@@ -279,7 +277,7 @@
         <div class="meta-cred">{{CredentialID}}</div>
         <div style="margin-top:6px;">
           <a href="https://chainletterlabs.com" target="_blank" style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
-            <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#555;white-space:nowrap;">Powered by</span>
+            <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#6167c9;white-space:nowrap;">Powered by</span>
             <svg height="14" width="116" viewBox="0 0 1220 148" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;display:block;vertical-align:middle;">
     <g transform="matrix(4.16667,0,0,4.16667,142.104,0)">
         <g>
@@ -331,7 +329,7 @@
     </g>
 </svg>
 
-            <span style="font-size:7px;font-family:sans-serif;color:#555;white-space:nowrap;">&nbsp;&middot;&nbsp;Tamper-evident credential delivery</span>
+            <span style="font-size:7px;font-family:sans-serif;color:#6167c9;white-space:nowrap;">&nbsp;&middot;&nbsp;Tamper-evident credential delivery</span>
           </a>
         </div>
       </div>
@@ -339,5 +337,18 @@
     </div>
   </div>
 </div>
+<script>
+  // Hide empty optional elements
+  document.querySelectorAll('.opt').forEach(el => {
+    if (!el.textContent.trim()) el.style.display = 'none';
+  });
+  // Hide level badge if no real BadgeLevel (just star + whitespace + Award)
+  const badge = document.querySelector('.level-badge');
+  if (badge && badge.textContent.replace(/[★\s]/g,'').toLowerCase() === 'award') badge.style.display = 'none';
+  // If achievement is hidden, also hide the "In recognition of" label
+  const achText = document.querySelector('.achievement-text');
+  const achLabel = document.getElementById('achieveWrap');
+  if (achText && achLabel && achText.style.display === 'none') achLabel.style.display = 'none';
+</script>
 </body>
 </html>

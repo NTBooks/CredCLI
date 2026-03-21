@@ -279,7 +279,7 @@ import {
   parseTemplateMeta, getPackageTemplatesDir,
   initTenantWorkspace, getDataDir,
 } from './utils/jobs.js';
-import { generateEmptyCSV, parseCSV } from './utils/csv.js';
+import { generateEmptyCSV, parseCSV, applyReplacements } from './utils/csv.js';
 import { renderJob, generateMailMergeFolder } from './utils/renderer.js';
 import { resolveTemplatePath, validateCsvBuffer, validateTemplateHtml, validateLogoValue } from './utils/validate.js';
 
@@ -375,16 +375,25 @@ export async function startServer(port = 3037) {
       await initTenantWorkspace(data.tenant);
       console.log(`[auth] Login OK — tenant: ${data.tenant}, group: ${data.groupname}`);
       console.log(`[workspace] Assigned folder: ${path.join(getDataDir(), data.tenant)}`);
-      const token = randomUUID();
-      activeSessions.set(token, {
-        jwt: data.jwt,
-        webhookUrl: data.webhookurl,
-        tenant: data.tenant,
-        groupname: data.groupname,
-        expires: data.expires,
-        expiresIn: data.expires_in,
-      });
-      persistSessions();
+      // Reuse existing session if the JWT is the same
+      let token = null;
+      for (const [t, s] of activeSessions) {
+        if (s.jwt === data.jwt) { token = t; break; }
+      }
+      if (token) {
+        console.log(`[auth] Reusing existing session for JWT`);
+      } else {
+        token = randomUUID();
+        activeSessions.set(token, {
+          jwt: data.jwt,
+          webhookUrl: data.webhookurl,
+          tenant: data.tenant,
+          groupname: data.groupname,
+          expires: data.expires,
+          expiresIn: data.expires_in,
+        });
+        persistSessions();
+      }
       res.json({
         token,
         webhookUrl: data.webhookurl,
@@ -508,6 +517,23 @@ export async function startServer(port = 3037) {
     if (!fs.existsSync(filePath)) return res.status(404).send('');
     res.setHeader('Content-Type', 'text/html');
     res.send(fs.readFileSync(filePath, 'utf8'));
+  });
+
+  // Preview endpoint — same as /raw but with workspace vars (logo, issuer) pre-filled
+  app.get('/api/templates/:name/preview', auth, async (_req, res) => {
+    let filePath;
+    try { filePath = resolveTemplatePath(getTemplatesDir(), _req.params.name); } catch { return res.status(400).send(''); }
+    if (!fs.existsSync(filePath)) return res.status(404).send('');
+    let html = fs.readFileSync(filePath, 'utf8');
+    try {
+      const wsCfg = await fs.readJson(path.join(getWorkspace(), 'workspace.json'));
+      const vars = {};
+      if (wsCfg.issuerName) vars.WorkspaceIssuer = wsCfg.issuerName;
+      if (wsCfg.logo)       vars.WorkspaceLogo   = wsCfg.logo;
+      html = applyReplacements(html, vars);
+    } catch { /* no workspace config — serve raw */ }
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
   });
 
   app.put('/api/templates/:name', auth, (req, res) => {

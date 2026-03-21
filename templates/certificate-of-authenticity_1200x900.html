@@ -1,0 +1,289 @@
+<!--CREDCLI:{"name":"Certificate of Authenticity","description":"Premium authentication certificate for items, works, or assets verified by a certifying authority","width":1200,"height":900,"fields":["FullName","Title","Achievement","Institution","Issuer","IssueDate","CredentialID","Signature","Location","Notes","QRUrl","VerificationURL","WorkspaceLogo","WorkspaceIssuer"]}-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>Certificate of Authenticity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 1200px; height: 900px; overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    color: #1c1c2e;
+  }
+
+  .page {
+    width: 1200px; height: 900px;
+    position: relative;
+    background: #ffffff;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Dark premium header */
+  .header {
+    background: #1c1c2e;
+    padding: 24px 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+    border-bottom: 3px solid #6167c9;
+  }
+  .header-brand { display: flex; align-items: center; gap: 18px; }
+  .header-org { color: white; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+  .header-location { color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 3px; }
+  .header-doc-type {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+  }
+
+  /* Main content */
+  .content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    overflow: hidden;
+  }
+
+  /* Left: Certificate body */
+  .cert-body {
+    padding: 48px 64px 36px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    border-right: 1px solid #f0f0f4;
+  }
+
+  .doc-title-row {
+    display: flex; flex-direction: column; margin-bottom: 32px;
+  }
+
+  .cert-eyebrow {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.2em;
+    text-transform: uppercase; color: #9ca3af; margin-bottom: 6px;
+  }
+
+  .cert-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 42px; font-weight: 700; line-height: 1.05;
+    letter-spacing: -0.01em; color: #1c1c2e;
+  }
+
+  .cert-title .of { font-weight: 300; font-style: italic; color: #6b7280; }
+
+  .rule {
+    height: 1px;
+    background: linear-gradient(to right, #6167c9, rgba(97,103,201,0.1));
+    margin: 28px 0;
+  }
+
+  .certifies-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16px; font-style: italic; color: #9ca3af;
+    margin-bottom: 6px;
+  }
+
+  .item-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 46px; font-weight: 600;
+    color: #1c1c2e; line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+
+  .item-category {
+    font-size: 15px; font-weight: 500; color: #6167c9;
+    letter-spacing: -0.01em; margin-bottom: 16px;
+  }
+
+  .item-description {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px; font-weight: 400; font-style: italic;
+    color: #6b7280; line-height: 1.65;
+    max-width: 580px;
+  }
+
+  /* Bottom row */
+  .bottom-row {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding-top: 24px;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .sig-block { display: flex; flex-direction: column; gap: 3px; }
+  .sig-line { width: 160px; height: 1px; background: #1c1c2e; margin-bottom: 5px; }
+  .sig-name { font-size: 13px; font-weight: 700; color: #1c1c2e; }
+  .sig-title { font-size: 11px; color: #9ca3af; font-style: italic; }
+
+  .issued-block { text-align: right; }
+  .issued-label { font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #9ca3af; margin-bottom: 3px; }
+  .issued-date { font-size: 15px; font-weight: 600; color: #1c1c2e; }
+
+  /* Right aside: Authentication panel */
+  .auth-panel {
+    background: #f8f9fc;
+    padding: 40px 32px;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    gap: 0;
+  }
+
+  /* Authentication seal */
+  .auth-seal {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+
+  .seal-outer {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    border: 3px solid #6167c9;
+    background: rgba(97,103,201,0.05);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .seal-outer::before {
+    content: '';
+    position: absolute; inset: 6px;
+    border-radius: 50%;
+    border: 1px solid rgba(97,103,201,0.25);
+  }
+
+  .seal-inner-text {
+    font-size: 8px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: #6167c9; text-align: center;
+    line-height: 1.5;
+  }
+
+  .seal-label {
+    font-size: 9px; font-weight: 600; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #9ca3af;
+  }
+
+  /* Serial number */
+  .serial-section { width: 100%; }
+  .serial-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #9ca3af; margin-bottom: 7px;
+  }
+  .serial-box {
+    background: white; border: 1px solid #e5e7eb;
+    border-left: 3px solid #6167c9;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px; font-weight: 700;
+    color: #1c1c2e; letter-spacing: 0.04em;
+    word-break: break-all; line-height: 1.6;
+  }
+
+  /* Location */
+  .location-section { width: 100%; }
+  .location-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #9ca3af; margin-bottom: 5px;
+  }
+  .location-value { font-size: 13px; font-weight: 500; color: #374151; }
+
+  /* Issuing authority */
+  .authority-section { width: 100%; }
+  .authority-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #9ca3af; margin-bottom: 5px;
+  }
+  .authority-value { font-size: 12px; font-weight: 600; color: #374151; line-height: 1.4; }
+
+  /* CL attribution */
+  .cl-attr { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+
+  .opt { display: block; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-brand">
+      <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:52px;width:auto;max-width:200px;object-fit:contain;" onerror="this.style.display='none'">
+      <div>
+        <div class="header-org">{{WorkspaceIssuer}}</div>
+        <div class="header-location opt">{{Location}}</div>
+      </div>
+    </div>
+    <div class="header-doc-type">Certificate of Authenticity</div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Certificate body -->
+    <div class="cert-body">
+      <div>
+        <div class="cert-eyebrow">Official Authentication Document</div>
+        <div class="cert-title">Certificate <span class="of">of</span><br>Authenticity</div>
+
+        <div class="rule"></div>
+
+        <div class="certifies-text">This certifies the authenticity of</div>
+        <div class="item-name">{{FullName}}</div>
+        <div class="item-category opt">{{Title}}</div>
+        <div class="item-description opt">{{Achievement}}</div>
+      </div>
+
+      <div class="bottom-row">
+        <div class="sig-block">
+          <div class="sig-line"></div>
+          <div class="sig-name">{{Issuer}}</div>
+          <div class="sig-title opt">{{Signature}}</div>
+        </div>
+        <div class="issued-block">
+          <div class="issued-label">Date Authenticated</div>
+          <div class="issued-date">{{IssueDate}}</div>
+        </div>
+        <a class="cl-attr" href="https://chainletterlabs.com" target="_blank">
+          <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#6167c9;white-space:nowrap;">Powered by</span>
+          <svg height="14" width="116" viewBox="0 0 1220 148" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;display:block;vertical-align:middle;"><g transform="matrix(4.16667,0,0,4.16667,142.104,0)"><path d="M0,27.3L-34.105,0L34.105,0L0,27.3Z" style="fill:rgb(85,177,227);"/></g><g transform="matrix(4.16667,0,0,4.16667,142.104,147.657)"><path d="M0,-27.3L-34.105,0L34.105,0L0,-27.3Z" style="fill:rgb(85,177,227);"/></g><g transform="matrix(4.16667,0,0,4.16667,373.779,105.98)"><path d="M0,-15.654L-4.939,-13.374C-5.889,-15.198 -7.409,-16.261 -9.803,-16.261C-13.792,-16.261 -16.072,-12.766 -16.072,-7.827C-16.072,-3.04 -13.754,0.608 -9.765,0.608C-7.371,0.608 -5.965,-0.418 -4.56,-2.774L-0.076,-0.114C-1.9,3.648 -5.091,5.889 -9.917,5.889C-16.87,5.889 -21.543,0.57 -21.543,-7.827C-21.543,-15.92 -16.68,-21.543 -9.727,-21.543C-4.711,-21.543 -1.672,-19.111 0,-15.654" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,473.685,17.9596)"><path d="M0,26.596L-5.319,26.596L-5.319,15.426L-16.224,15.426L-16.224,26.596L-21.543,26.596L-21.543,0L-16.224,0L-16.224,10.183L-5.319,10.183L-5.319,0L0,0L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,548.046,63.7117)"><path d="M0,4.635L-1.71,-0.19C-2.242,-1.748 -2.774,-3.344 -3.04,-4.332C-3.306,-3.344 -3.838,-1.748 -4.37,-0.19L-6.079,4.635L0,4.635ZM9.763,15.615L3.913,15.615L1.823,9.689L-7.903,9.689L-9.993,15.615L-15.692,15.615L-5.51,-10.98L-0.343,-10.98L9.763,15.615Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(-4.16667,0,0,4.16667,1912.99,-2577.28)"><rect x="310.152" y="622.858" width="5.318" height="26.596" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,729.245,17.9596)"><path d="M0,26.596L-4.749,26.596L-14.514,12.082C-15.159,11.094 -16.033,9.765 -16.375,9.08C-16.375,10.069 -16.299,13.412 -16.299,14.894L-16.299,26.596L-21.542,26.596L-21.542,0L-16.451,0L-7.028,14.058C-6.383,15.046 -5.509,16.375 -5.167,17.06C-5.167,16.072 -5.243,12.728 -5.243,11.246L-5.243,0L0,0L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,809.889,17.9596)"><path d="M0,26.596L-14.894,26.596L-14.894,0L-13.146,0L-13.146,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,887.848,17.9596)"><path d="M0,26.596L-15.615,26.596L-15.615,0L-0.569,0L-0.569,1.596L-13.867,1.596L-13.867,11.626L-5.812,11.626L-5.812,13.222L-13.867,13.222L-13.867,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,971.482,122.126)"><path d="M0,-23.404L-8.245,-23.404L-8.245,1.596L-9.993,1.596L-9.993,-23.404L-18.237,-23.404L-18.237,-25L0,-25L0,-23.404Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1056.35,122.126)"><path d="M0,-23.404L-8.245,-23.404L-8.245,1.596L-9.993,1.596L-9.993,-23.404L-18.237,-23.404L-18.237,-25L0,-25L0,-23.404Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1134.07,17.9596)"><path d="M0,26.596L-15.615,26.596L-15.615,0L-0.569,0L-0.569,1.596L-13.867,1.596L-13.867,11.626L-5.812,11.626L-5.812,13.222L-13.867,13.222L-13.867,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1212.11,98.3812)"><path d="M0,-12.006C0,-16.11 -2.583,-17.705 -6.877,-17.705L-13.943,-17.705L-13.943,-6.117L-7.333,-6.117C-2.545,-6.117 0,-7.941 0,-12.006M1.748,-12.044C1.748,-7.827 -0.76,-5.434 -4.825,-4.749L1.292,7.295L-0.722,7.295L-6.687,-4.522L-13.943,-4.522L-13.943,7.295L-15.691,7.295L-15.691,-19.301L-6.801,-19.301C-1.861,-19.301 1.748,-17.287 1.748,-12.044" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,144.104,-1.13687e-13)"><path d="M11.969,17.719L0,27.3L-11.969,17.719L0,8.138L11.969,17.719Z" style="fill:rgb(0,148,212);"/></g></svg>
+          <span style="font-size:7px;font-family:sans-serif;color:#6167c9;white-space:nowrap;">&nbsp;&middot;&nbsp;Tamper-evident</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Authentication panel -->
+    <div class="auth-panel">
+      <div class="auth-seal">
+        <div class="seal-outer">
+          <div class="seal-inner-text">AUTHENTIC<br>VERIFIED<br>CERTIFIED</div>
+        </div>
+        <div class="seal-label">Authentication Seal</div>
+      </div>
+
+      <div style="width:100%;display:flex;flex-direction:column;gap:18px;">
+        <div class="serial-section">
+          <div class="serial-label">Authentication No.</div>
+          <div class="serial-box">{{CredentialID}}</div>
+        </div>
+        <div class="authority-section opt">
+          <div class="authority-label">Issued By</div>
+          <div class="authority-value">{{Institution}}</div>
+        </div>
+        <div class="location-section opt">
+          <div class="location-label">Jurisdiction</div>
+          <div class="location-value">{{Location}}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.opt').forEach(el => {
+    if (!el.textContent.trim()) el.style.display = 'none';
+  });
+</script>
+</body>
+</html>

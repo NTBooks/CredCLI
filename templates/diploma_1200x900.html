@@ -219,9 +219,9 @@
   <div class="corner br"></div>
 
   <div class="content">
-    <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:56px;width:auto;max-width:140px;object-fit:contain;margin-bottom:8px;" onerror="this.style.display='none'">
+    <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" style="height:64px;width:auto;max-width:160px;object-fit:contain;margin-bottom:8px;" onerror="this.style.display='none'">
     <div class="institution">{{WorkspaceIssuer}}</div>
-    <div class="location">{{Location}}</div>
+    <div class="location opt">{{Location}}</div>
     <div class="divider"></div>
 
     <div class="presents">This is to certify that</div>
@@ -230,15 +230,15 @@
 
     <div class="degree-line">having fulfilled all requirements, is hereby awarded the degree of</div>
     <div class="degree-name">{{Title}}</div>
-    <div class="major-line">in {{Major}}{{CourseName}}</div>
+    <div class="major-line opt">in {{Major}}</div>
 
     <div class="divider thin"></div>
 
-    <div class="achievement">{{Achievement}}</div>
+    <div class="achievement opt">{{Achievement}}</div>
 
     <div style="display:flex;gap:24px;align-items:center;margin:4px 0;">
-      <div class="gpa-badge">GPA {{GPA}}</div>
-      <div style="font-size:13px;color:#555;font-style:italic;">{{Hours}} Credit Hours</div>
+      <div class="gpa-badge opt" id="gpaBadge">GPA {{GPA}}</div>
+      <div class="opt" id="hoursLine" style="font-size:13px;color:#555;font-style:italic;">{{Hours}} Credit Hours</div>
     </div>
 
     <div class="date-line">
@@ -250,7 +250,7 @@
       <div class="sig-block">
         <div class="sig-line"></div>
         <div class="sig-name">{{Issuer}}</div>
-        <div class="sig-title">{{Signature}}</div>
+        <div class="sig-title opt">{{Signature}}</div>
       </div>
 
       <div class="seal">
@@ -263,7 +263,7 @@
 <div class="cred-id">{{CredentialID}}</div>
         <div style="margin-top:6px;">
           <a href="https://chainletterlabs.com" target="_blank" style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
-            <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#555;white-space:nowrap;">Powered by</span>
+            <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#6167c9;white-space:nowrap;">Powered by</span>
             <svg height="14" width="116" viewBox="0 0 1220 148" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;display:block;vertical-align:middle;">
     <g transform="matrix(4.16667,0,0,4.16667,142.104,0)">
         <g>
@@ -315,12 +315,24 @@
     </g>
 </svg>
 
-            <span style="font-size:7px;font-family:sans-serif;color:#555;white-space:nowrap;">&nbsp;&middot;&nbsp;Tamper-evident credential delivery</span>
+            <span style="font-size:7px;font-family:sans-serif;color:#6167c9;white-space:nowrap;">&nbsp;&middot;&nbsp;Tamper-evident credential delivery</span>
           </a>
         </div>
       </div>
     </div>
   </div>
 </div>
+<script>
+  // Hide empty optional elements
+  document.querySelectorAll('.opt').forEach(el => {
+    if (!el.textContent.trim()) el.style.display = 'none';
+  });
+  // Hide GPA badge if only "GPA " with no value
+  const gpaBadge = document.getElementById('gpaBadge');
+  if (gpaBadge && gpaBadge.textContent.replace('GPA','').trim() === '') gpaBadge.style.display = 'none';
+  // Hide hours line if only "Credit Hours" with no value
+  const hoursLine = document.getElementById('hoursLine');
+  if (hoursLine && hoursLine.textContent.replace('Credit Hours','').trim() === '') hoursLine.style.display = 'none';
+</script>
 </body>
 </html>

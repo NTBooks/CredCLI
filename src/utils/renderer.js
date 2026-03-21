@@ -200,7 +200,7 @@ export async function generateMailMergeFolder(outputDir, results, emailTemplateH
 
 // ── Main render entry ─────────────────────────────────────────────────────────
 
-export async function renderJob(jobDir, format = 'pdf', onProgress, emailTemplatePath = null, { limit = 0, resume = false } = {}) {
+export async function renderJob(jobDir, format = 'png', onProgress, emailTemplatePath = null, { limit = 0, resume = false } = {}) {
   const csvPath      = path.join(jobDir, 'mailmerge.csv');
   const templatePath = path.join(jobDir, 'template.html');
   const outputDir    = path.join(jobDir, 'output');

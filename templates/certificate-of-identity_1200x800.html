@@ -1,0 +1,317 @@
+<!--CREDCLI:{"name":"Certificate of Identity","description":"Official identity certificate or professional membership credential with role and organisational details","width":1200,"height":800,"fields":["FullName","FName","LName","Title","Major","Institution","Issuer","Location","CredentialID","IssueDate","ExpirationDate","Signature","Notes","QRUrl","VerificationURL","WorkspaceLogo","WorkspaceIssuer"]}-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>Certificate of Identity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Source+Serif+4:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body { width: 1200px; height: 800px; overflow: hidden; font-family: 'Inter', sans-serif; color: #111827; }
+
+  .page {
+    width: 1200px; height: 800px;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    overflow: hidden;
+  }
+
+  /* Left sidebar */
+  .sidebar {
+    background: #1e1e2e;
+    padding: 40px 32px;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle grid overlay on sidebar */
+  .sidebar::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(97,103,201,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(97,103,201,0.06) 1px, transparent 1px);
+    background-size: 30px 30px;
+    pointer-events: none;
+  }
+
+  .sidebar-top { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; position: relative; z-index: 1; }
+
+  .sidebar-logo-wrap {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    background: rgba(97,103,201,0.15);
+    border: 2px solid rgba(97,103,201,0.4);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .sidebar-org {
+    font-size: 14px; font-weight: 700; color: white;
+    text-align: center; letter-spacing: -0.01em;
+    line-height: 1.3; margin-bottom: 4px;
+  }
+
+  .sidebar-location {
+    font-size: 11px; color: rgba(255,255,255,0.4);
+    text-align: center; letter-spacing: 0.02em;
+  }
+
+  /* ID info panel in sidebar */
+  .sidebar-id-panel {
+    width: 100%; position: relative; z-index: 1;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
+  .id-field { display: flex; flex-direction: column; gap: 3px; }
+  .id-field-label {
+    font-size: 8px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: rgba(255,255,255,0.3);
+  }
+  .id-field-value {
+    font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8);
+    font-family: 'Courier New', monospace; word-break: break-all;
+    line-height: 1.5;
+  }
+
+  .id-field-value.plain {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px; color: rgba(255,255,255,0.75);
+  }
+
+  /* Sidebar CL attribution */
+  .sidebar-cl {
+    display: inline-flex; align-items: center; gap: 5px;
+    text-decoration: none; opacity: 0.5;
+    position: relative; z-index: 1;
+  }
+
+  /* Right main panel */
+  .main {
+    background: #ffffff;
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* CL top stripe */
+  .cl-stripe {
+    height: 4px;
+    background: linear-gradient(to right, #6167c9, #5756a6, #6167c9);
+    flex-shrink: 0;
+  }
+
+  .main-content {
+    flex: 1;
+    padding: 40px 56px 32px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+
+  /* Doc type label */
+  .doc-type {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.22em;
+    text-transform: uppercase; color: #6167c9;
+    margin-bottom: 28px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .doc-type::after {
+    content: '';
+    flex: 1; height: 1px;
+    background: linear-gradient(to right, rgba(97,103,201,0.4), transparent);
+  }
+
+  /* Name block */
+  .name-block { margin-bottom: 20px; }
+
+  .identity-label {
+    font-size: 11px; font-weight: 500; color: #9ca3af;
+    letter-spacing: 0.04em; margin-bottom: 6px;
+  }
+
+  .full-name {
+    font-family: 'Source Serif 4', serif;
+    font-size: 52px; font-weight: 600;
+    color: #111827; letter-spacing: -0.03em;
+    line-height: 1.0; margin-bottom: 8px;
+  }
+
+  .role-title {
+    font-size: 20px; font-weight: 500; color: #6167c9;
+    letter-spacing: -0.01em; margin-bottom: 4px;
+  }
+
+  .department {
+    font-size: 14px; color: #6b7280; font-weight: 400;
+  }
+
+  /* Info grid */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border: 1px solid #f0f0f5;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .info-cell {
+    padding: 14px 20px;
+    border-right: 1px solid #f0f0f5;
+  }
+  .info-cell:last-child { border-right: none; }
+
+  .info-cell-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #9ca3af; margin-bottom: 4px;
+  }
+  .info-cell-value { font-size: 14px; font-weight: 600; color: #111827; }
+
+  /* Footer row */
+  .footer-row {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding-top: 20px;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .sig-block { display: flex; flex-direction: column; gap: 3px; }
+  .sig-line { width: 150px; height: 1px; background: #1e1e2e; margin-bottom: 4px; }
+  .sig-name { font-size: 12px; font-weight: 700; color: #111827; }
+  .sig-role { font-size: 10px; color: #9ca3af; }
+
+  .validity-block { text-align: center; }
+  .validity-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    color: #15803d; border-radius: 128px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 5px 14px;
+    margin-bottom: 4px;
+  }
+  .validity-dot { width: 6px; height: 6px; background: #16a34a; border-radius: 50%; }
+  .validity-dates { font-size: 10px; color: #9ca3af; text-align: center; }
+
+  .cl-attr { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+
+  .opt { display: block; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo-wrap">
+        <img src="{{WorkspaceLogo}}" alt="{{WorkspaceIssuer}}" id="sidebarLogo" style="height:56px;width:auto;max-width:130px;object-fit:contain;" onerror="this.style.display='none';document.getElementById('sidebarLogoWrap2').style.display='none'">
+      </div>
+      <div class="sidebar-org">{{WorkspaceIssuer}}</div>
+      <div class="sidebar-location opt">{{Location}}</div>
+    </div>
+
+    <div class="sidebar-id-panel">
+      <div class="id-field">
+        <div class="id-field-label">ID Number</div>
+        <div class="id-field-value">{{CredentialID}}</div>
+      </div>
+      <div class="id-field">
+        <div class="id-field-label">Issued By</div>
+        <div class="id-field-value plain">{{Issuer}}</div>
+      </div>
+      <div class="id-field opt" id="instField">
+        <div class="id-field-label">Organisation</div>
+        <div class="id-field-value plain">{{Institution}}</div>
+      </div>
+    </div>
+
+    <a class="sidebar-cl" href="https://chainletterlabs.com" target="_blank">
+      <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:rgba(165,180,252,0.8);white-space:nowrap;">Powered by</span>
+      <svg height="10" width="83" viewBox="0 0 1220 148" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;display:block;vertical-align:middle;filter:brightness(0) invert(1);"><g transform="matrix(4.16667,0,0,4.16667,142.104,0)"><path d="M0,27.3L-34.105,0L34.105,0L0,27.3Z" style="fill:rgb(85,177,227);"/></g><g transform="matrix(4.16667,0,0,4.16667,142.104,147.657)"><path d="M0,-27.3L-34.105,0L34.105,0L0,-27.3Z" style="fill:rgb(85,177,227);"/></g><g transform="matrix(4.16667,0,0,4.16667,373.779,105.98)"><path d="M0,-15.654L-4.939,-13.374C-5.889,-15.198 -7.409,-16.261 -9.803,-16.261C-13.792,-16.261 -16.072,-12.766 -16.072,-7.827C-16.072,-3.04 -13.754,0.608 -9.765,0.608C-7.371,0.608 -5.965,-0.418 -4.56,-2.774L-0.076,-0.114C-1.9,3.648 -5.091,5.889 -9.917,5.889C-16.87,5.889 -21.543,0.57 -21.543,-7.827C-21.543,-15.92 -16.68,-21.543 -9.727,-21.543C-4.711,-21.543 -1.672,-19.111 0,-15.654" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,473.685,17.9596)"><path d="M0,26.596L-5.319,26.596L-5.319,15.426L-16.224,15.426L-16.224,26.596L-21.543,26.596L-21.543,0L-16.224,0L-16.224,10.183L-5.319,10.183L-5.319,0L0,0L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,548.046,63.7117)"><path d="M0,4.635L-1.71,-0.19C-2.242,-1.748 -2.774,-3.344 -3.04,-4.332C-3.306,-3.344 -3.838,-1.748 -4.37,-0.19L-6.079,4.635L0,4.635ZM9.763,15.615L3.913,15.615L1.823,9.689L-7.903,9.689L-9.993,15.615L-15.692,15.615L-5.51,-10.98L-0.343,-10.98L9.763,15.615Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(-4.16667,0,0,4.16667,1912.99,-2577.28)"><rect x="310.152" y="622.858" width="5.318" height="26.596" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,729.245,17.9596)"><path d="M0,26.596L-4.749,26.596L-14.514,12.082C-15.159,11.094 -16.033,9.765 -16.375,9.08C-16.375,10.069 -16.299,13.412 -16.299,14.894L-16.299,26.596L-21.542,26.596L-21.542,0L-16.451,0L-7.028,14.058C-6.383,15.046 -5.509,16.375 -5.167,17.06C-5.167,16.072 -5.243,12.728 -5.243,11.246L-5.243,0L0,0L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,809.889,17.9596)"><path d="M0,26.596L-14.894,26.596L-14.894,0L-13.146,0L-13.146,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,887.848,17.9596)"><path d="M0,26.596L-15.615,26.596L-15.615,0L-0.569,0L-0.569,1.596L-13.867,1.596L-13.867,11.626L-5.812,11.626L-5.812,13.222L-13.867,13.222L-13.867,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,971.482,122.126)"><path d="M0,-23.404L-8.245,-23.404L-8.245,1.596L-9.993,1.596L-9.993,-23.404L-18.237,-23.404L-18.237,-25L0,-25L0,-23.404Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1056.35,122.126)"><path d="M0,-23.404L-8.245,-23.404L-8.245,1.596L-9.993,1.596L-9.993,-23.404L-18.237,-23.404L-18.237,-25L0,-25L0,-23.404Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1134.07,17.9596)"><path d="M0,26.596L-15.615,26.596L-15.615,0L-0.569,0L-0.569,1.596L-13.867,1.596L-13.867,11.626L-5.812,11.626L-5.812,13.222L-13.867,13.222L-13.867,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1212.11,98.3812)"><path d="M0,-12.006C0,-16.11 -2.583,-17.705 -6.877,-17.705L-13.943,-17.705L-13.943,-6.117L-7.333,-6.117C-2.545,-6.117 0,-7.941 0,-12.006M1.748,-12.044C1.748,-7.827 -0.76,-5.434 -4.825,-4.749L1.292,7.295L-0.722,7.295L-6.687,-4.522L-13.943,-4.522L-13.943,7.295L-15.691,7.295L-15.691,-19.301L-6.801,-19.301C-1.861,-19.301 1.748,-17.287 1.748,-12.044" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,144.104,-1.13687e-13)"><path d="M11.969,17.719L0,27.3L-11.969,17.719L0,8.138L11.969,17.719Z" style="fill:rgb(0,148,212);"/></g></svg>
+    </a>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="cl-stripe"></div>
+
+    <div class="main-content">
+      <div>
+        <div class="doc-type">Certificate of Identity</div>
+
+        <div class="name-block">
+          <div class="identity-label">Identity Holder</div>
+          <div class="full-name">{{FullName}}</div>
+          <div class="role-title opt">{{Title}}</div>
+          <div class="department opt">{{Major}}</div>
+        </div>
+
+        <!-- Info grid: issue date | expiry | notes -->
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="info-cell-label">Date Issued</div>
+            <div class="info-cell-value">{{IssueDate}}</div>
+          </div>
+          <div class="info-cell opt" id="expiryCell">
+            <div class="info-cell-label">Valid Until</div>
+            <div class="info-cell-value" id="expiryVal">{{ExpirationDate}}</div>
+          </div>
+          <div class="info-cell opt">
+            <div class="info-cell-label">Notes</div>
+            <div class="info-cell-value" style="font-size:12px;font-weight:400;color:#6b7280;">{{Notes}}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer-row">
+        <div class="sig-block">
+          <div class="sig-line"></div>
+          <div class="sig-name">{{Issuer}}</div>
+          <div class="sig-role opt">{{Signature}}</div>
+        </div>
+
+        <div class="validity-block" id="validBadge">
+          <div class="validity-badge"><span class="validity-dot"></span>Verified Identity</div>
+          <div class="validity-dates" id="validDates">{{IssueDate}} — {{ExpirationDate}}</div>
+        </div>
+
+        <a class="cl-attr" href="https://chainletterlabs.com" target="_blank">
+          <span style="font-size:7px;font-family:sans-serif;letter-spacing:1px;text-transform:uppercase;color:#6167c9;white-space:nowrap;">Powered by</span>
+          <svg height="14" width="116" viewBox="0 0 1220 148" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;display:block;vertical-align:middle;"><g transform="matrix(4.16667,0,0,4.16667,142.104,0)"><path d="M0,27.3L-34.105,0L34.105,0L0,27.3Z" style="fill:rgb(85,177,227);"/></g><g transform="matrix(4.16667,0,0,4.16667,142.104,147.657)"><path d="M0,-27.3L-34.105,0L34.105,0L0,-27.3Z" style="fill:rgb(85,177,227);"/></g><g transform="matrix(4.16667,0,0,4.16667,373.779,105.98)"><path d="M0,-15.654L-4.939,-13.374C-5.889,-15.198 -7.409,-16.261 -9.803,-16.261C-13.792,-16.261 -16.072,-12.766 -16.072,-7.827C-16.072,-3.04 -13.754,0.608 -9.765,0.608C-7.371,0.608 -5.965,-0.418 -4.56,-2.774L-0.076,-0.114C-1.9,3.648 -5.091,5.889 -9.917,5.889C-16.87,5.889 -21.543,0.57 -21.543,-7.827C-21.543,-15.92 -16.68,-21.543 -9.727,-21.543C-4.711,-21.543 -1.672,-19.111 0,-15.654" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,473.685,17.9596)"><path d="M0,26.596L-5.319,26.596L-5.319,15.426L-16.224,15.426L-16.224,26.596L-21.543,26.596L-21.543,0L-16.224,0L-16.224,10.183L-5.319,10.183L-5.319,0L0,0L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,548.046,63.7117)"><path d="M0,4.635L-1.71,-0.19C-2.242,-1.748 -2.774,-3.344 -3.04,-4.332C-3.306,-3.344 -3.838,-1.748 -4.37,-0.19L-6.079,4.635L0,4.635ZM9.763,15.615L3.913,15.615L1.823,9.689L-7.903,9.689L-9.993,15.615L-15.692,15.615L-5.51,-10.98L-0.343,-10.98L9.763,15.615Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(-4.16667,0,0,4.16667,1912.99,-2577.28)"><rect x="310.152" y="622.858" width="5.318" height="26.596" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,729.245,17.9596)"><path d="M0,26.596L-4.749,26.596L-14.514,12.082C-15.159,11.094 -16.033,9.765 -16.375,9.08C-16.375,10.069 -16.299,13.412 -16.299,14.894L-16.299,26.596L-21.542,26.596L-21.542,0L-16.451,0L-7.028,14.058C-6.383,15.046 -5.509,16.375 -5.167,17.06C-5.167,16.072 -5.243,12.728 -5.243,11.246L-5.243,0L0,0L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,809.889,17.9596)"><path d="M0,26.596L-14.894,26.596L-14.894,0L-13.146,0L-13.146,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,887.848,17.9596)"><path d="M0,26.596L-15.615,26.596L-15.615,0L-0.569,0L-0.569,1.596L-13.867,1.596L-13.867,11.626L-5.812,11.626L-5.812,13.222L-13.867,13.222L-13.867,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,971.482,122.126)"><path d="M0,-23.404L-8.245,-23.404L-8.245,1.596L-9.993,1.596L-9.993,-23.404L-18.237,-23.404L-18.237,-25L0,-25L0,-23.404Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1056.35,122.126)"><path d="M0,-23.404L-8.245,-23.404L-8.245,1.596L-9.993,1.596L-9.993,-23.404L-18.237,-23.404L-18.237,-25L0,-25L0,-23.404Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1134.07,17.9596)"><path d="M0,26.596L-15.615,26.596L-15.615,0L-0.569,0L-0.569,1.596L-13.867,1.596L-13.867,11.626L-5.812,11.626L-5.812,13.222L-13.867,13.222L-13.867,25L0,25L0,26.596Z" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,1212.11,98.3812)"><path d="M0,-12.006C0,-16.11 -2.583,-17.705 -6.877,-17.705L-13.943,-17.705L-13.943,-6.117L-7.333,-6.117C-2.545,-6.117 0,-7.941 0,-12.006M1.748,-12.044C1.748,-7.827 -0.76,-5.434 -4.825,-4.749L1.292,7.295L-0.722,7.295L-6.687,-4.522L-13.943,-4.522L-13.943,7.295L-15.691,7.295L-15.691,-19.301L-6.801,-19.301C-1.861,-19.301 1.748,-17.287 1.748,-12.044" style="fill:rgb(76,76,78);"/></g><g transform="matrix(4.16667,0,0,4.16667,144.104,-1.13687e-13)"><path d="M11.969,17.719L0,27.3L-11.969,17.719L0,8.138L11.969,17.719Z" style="fill:rgb(0,148,212);"/></g></svg>
+          <span style="font-size:7px;font-family:sans-serif;color:#6167c9;white-space:nowrap;">&nbsp;&middot;&nbsp;Blockchain-verified</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Hide empty optional elements
+  document.querySelectorAll('.opt').forEach(el => {
+    if (!el.textContent.trim()) el.style.display = 'none';
+  });
+
+  // Hide expiry cell if ExpirationDate is blank
+  const expiryVal = document.getElementById('expiryVal');
+  if (expiryVal && !expiryVal.textContent.trim()) {
+    document.getElementById('expiryCell').style.display = 'none';
+    // Also simplify the validity dates line
+    const vd = document.getElementById('validDates');
+    if (vd) vd.style.display = 'none';
+  }
+
+  // Hide institution field in sidebar if blank
+  const instField = document.getElementById('instField');
+  if (instField) {
+    const val = instField.querySelector('.id-field-value');
+    if (val && !val.textContent.trim()) instField.style.display = 'none';
+  }
+</script>
+</body>
+</html>
