@@ -1,7 +1,8 @@
 const path = require('path');
+const os = require('os');
 const { execSync } = require('child_process');
 
-const browsersPath = path.join(__dirname, 'dist', '.browsers');
+const browsersPath = path.join(os.homedir(), '.credcli', 'browsers');
 
 try {
   execSync('playwright install chromium', {

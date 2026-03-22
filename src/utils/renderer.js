@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import os from 'os';
 import qrcode from 'qrcode';
 import { stringify as csvStringify } from 'csv-stringify/sync';
 import { parseCSV, applyReplacements } from './csv.js';
@@ -272,12 +272,11 @@ export async function renderJob(jobDir, format = 'png', onProgress, emailTemplat
     height = meta.height ?? 900;
   } catch {}
 
-  // Use the locally-installed browser (postinstall puts it in dist/.browsers)
+  // Use the browser installed by postinstall (~/.credcli/browsers)
   // so containers and Cowork installs work without any environment configuration.
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const localBrowsers = path.join(__dirname, '..', '.browsers');
-  if (fs.existsSync(localBrowsers) && !process.env.PLAYWRIGHT_BROWSERS_PATH) {
-    process.env.PLAYWRIGHT_BROWSERS_PATH = localBrowsers;
+  const homeBrowsers = path.join(os.homedir(), '.credcli', 'browsers');
+  if (fs.existsSync(homeBrowsers) && !process.env.PLAYWRIGHT_BROWSERS_PATH) {
+    process.env.PLAYWRIGHT_BROWSERS_PATH = homeBrowsers;
   }
 
   const { chromium } = await import('playwright');
