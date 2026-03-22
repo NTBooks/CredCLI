@@ -209,7 +209,7 @@ function MainMenu({ tokenInfo, onLogout }) {
   return (
     <Box flexDirection="column" marginY={1}>
       <Text color="cyan">{BANNER}</Text>
-      <Text color="gray">  Mail-merge credential & certificate generator  v0.1.0</Text>
+      <Text color="gray">  Mail-merge credential & certificate generator  {__CREDCLI_VERSION__}</Text>
       {tokenInfo && (
         <Text color="green">  ✔ Signed in as <Text bold>{tokenInfo.tenant}</Text>
           {tokenInfo.groupname ? <Text color="gray"> ({tokenInfo.groupname})</Text> : null}
@@ -251,7 +251,7 @@ if (command === 'serve' || !command) {
   if (!command) {
     // Print the logo for bare `credcli` invocation
     console.log('\n' + BANNER);
-    console.log('  Mail-merge credential & certificate generator\n');
+    console.log(`  Mail-merge credential & certificate generator  ${__CREDCLI_VERSION__}\n`);
   }
   const { startServer } = await import('./serve.js');
   const port   = parseInt(cli.flags.port, 10) || parseInt(process.env.PORT, 10) || 3037;
