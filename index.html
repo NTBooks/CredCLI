@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CredCLI — Credential Generator</title>
+<meta name="description" content="CredCLI turns HTML templates and a CSV spreadsheet into signed PDFs, verifiable badges, and blockchain-stamped credentials — in seconds.">
+<meta name="robots" content="index, follow">
+<!-- OpenGraph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="CredCLI — Credential Generator">
+<meta property="og:description" content="CredCLI turns HTML templates and a CSV spreadsheet into signed PDFs, verifiable badges, and blockchain-stamped credentials — in seconds.">
+<meta property="og:image" content="user_files/CL Logo White Cropped.png">
+<meta property="og:url" content="index.html">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -481,9 +489,63 @@
     border-radius: 6px;
     border: 1px solid rgba(97,103,201,0.2);
   }
+
+  /* ── NAV ── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(36, 39, 110, 0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .nav-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+  }
+  .nav-links {
+    display: flex;
+    gap: 24px;
+    list-style: none;
+  }
+  .nav-links a {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color .15s;
+    text-decoration: none;
+  }
+  .nav-links a:hover { color: #fff; }
+  @media (max-width: 600px) { .nav-links { display: none; } }
 </style>
 </head>
 <body>
+
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">
+      <img src="user_files/CL Logo White Cropped.png" alt="Chainletter" style="height:28px;">
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="agent.html">Agent Guide</a></li>
+    </ul>
+  </div>
+</nav>
 
   <!-- HERO -->
   <section class="hero">
