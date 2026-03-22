@@ -521,6 +521,7 @@
       <li><a href="index.html">Overview</a></li>
       <li><a href="agent.html" style="color:#fff;">Agent Guide</a></li>
       <li><a href="#setup">Setup</a></li>
+      <li><a href="#cowork">Cowork VM</a></li>
       <li><a href="#auth">Auth</a></li>
       <li><a href="#skills">Skills</a></li>
       <li><a href="#workflow">Workflow</a></li>
@@ -560,6 +561,7 @@
     <div class="toc-title">On this page</div>
     <ul class="toc-list">
       <li><a href="#setup">1. Install Node.js &amp; CredCLI</a></li>
+      <li><a href="#cowork">1b. Cowork VM Setup</a></li>
       <li><a href="#auth">2. Claim Your Chainletter Token</a></li>
       <li><a href="#skills">3. Expand Claude Skills</a></li>
       <li><a href="#workflow">4. Stamped Credential Workflow</a></li>
@@ -629,6 +631,56 @@ npx @credcli/cli &lt;command&gt;</code></pre>
     </div>
 
     <p>You should see a list of commands. If not, ensure <code>npm bin -g</code> is on your <code>PATH</code>.</p>
+
+  </section>
+
+  <!-- ── Section 1b: Cowork VM ─────────────────────────────────────────── -->
+  <section class="section" id="cowork" aria-labelledby="cowork-heading">
+    <div class="section-header">
+      <div class="section-icon">&#x1F5A5;&#xFE0F;</div>
+      <h2 id="cowork-heading">Cowork VM Setup</h2>
+    </div>
+
+    <div class="alert alert-warning">
+      <span class="alert-icon">&#x26A0;&#xFE0F;</span>
+      <div><strong>Cowork VMs only.</strong> Skip this section if you are using a standard local machine, VSCode, or Claude Code directly. These steps are only needed in Cowork sandbox environments where the default npm prefix and Playwright cache paths are not user-writable.</div>
+    </div>
+
+    <p>Cowork VMs have two constraints that require a one-time workaround:</p>
+    <ul style="margin: 12px 0 0 20px; line-height:2">
+      <li>The default npm global prefix is not writable — install into <code>~/.npm-global</code> instead.</li>
+      <li>The mounted workspace folder blocks file deletion (EPERM) — a one-line patch silences this after render.</li>
+    </ul>
+
+    <h3 style="margin-top:24px">Step 1 — Install into a writable prefix</h3>
+    <div class="code-block">
+      <pre><code>npm install -g @credcli/cli --prefix ~/.npm-global
+export PATH="$HOME/.npm-global/bin:$PATH"
+credcli --version</code></pre>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+
+    <h3 style="margin-top:24px">Step 2 — Run the Cowork setup script</h3>
+    <p>This installs Playwright's Chromium browser into the package directory (so it survives session resets) and applies the EPERM patch to <code>cli.mjs</code>. Safe to re-run — each step checks before acting.</p>
+    <div class="code-block">
+      <pre><code>bash ~/.npm-global/lib/node_modules/@credcli/cli/scripts/setup.sh</code></pre>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+
+    <div class="alert alert-info" style="margin-top:16px">
+      <span class="alert-icon">&#x1F916;</span>
+      <div><strong>Let Claude do it.</strong> If you paste your Chainletter token URL and say <em>"Set up CredCLI on this Cowork VM"</em>, Claude will run both steps above automatically.</div>
+    </div>
+
+    <h3 style="margin-top:24px">Step 3 — Use the browser path when rendering</h3>
+    <p>Every <code>credcli run</code> command needs the <code>PLAYWRIGHT_BROWSERS_PATH</code> variable pointing at the package-local browser:</p>
+    <div class="code-block">
+      <pre><code>PLAYWRIGHT_BROWSERS_PATH=~/.npm-global/lib/node_modules/@credcli/cli/.browsers \
+  credcli run &lt;job&gt; --format png</code></pre>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+
+    <p style="margin-top:12px">The setup script prints this exact command at the end so you can copy it from there.</p>
 
   </section>
 

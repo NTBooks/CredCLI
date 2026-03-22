@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import qrcode from 'qrcode';
 import { stringify as csvStringify } from 'csv-stringify/sync';
 import { parseCSV, applyReplacements } from './csv.js';
@@ -271,7 +272,24 @@ export async function renderJob(jobDir, format = 'png', onProgress, emailTemplat
     height = meta.height ?? 900;
   } catch {}
 
+  // Use the locally-installed browser (postinstall puts it in dist/.browsers)
+  // so containers and Cowork installs work without any environment configuration.
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const localBrowsers = path.join(__dirname, '..', '.browsers');
+  if (fs.existsSync(localBrowsers) && !process.env.PLAYWRIGHT_BROWSERS_PATH) {
+    process.env.PLAYWRIGHT_BROWSERS_PATH = localBrowsers;
+  }
+
   const { chromium } = await import('playwright');
+
+  // Provide a clear error if Chromium isn't available rather than a raw Playwright stack trace.
+  const executablePath = chromium.executablePath();
+  if (!fs.existsSync(executablePath)) {
+    throw new Error(
+      `Chromium not found at ${executablePath}.\nRun: npx playwright install chromium`
+    );
+  }
+
   const browser = await chromium.launch();
   const results = [];
 
@@ -317,7 +335,7 @@ export async function renderJob(jobDir, format = 'png', onProgress, emailTemplat
       }
     } finally {
       await page.close();
-      fs.removeSync(tmpPath);
+      try { fs.removeSync(tmpPath); } catch (_) {}
     }
 
     const result = { name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath), row: { ...row }, qrWarned };
