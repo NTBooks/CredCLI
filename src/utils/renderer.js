@@ -1,5 +1,8 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
 import qrcode from 'qrcode';
 import { stringify as csvStringify } from 'csv-stringify/sync';
 import { parseCSV, applyReplacements } from './csv.js';
@@ -271,9 +274,10 @@ export async function renderJob(jobDir, format = 'png', onProgress, emailTemplat
     height = meta.height ?? 900;
   } catch {}
 
-  const { chromium } = await import('playwright');
-  const browser = await chromium.launch();
   const results = [];
+  const manifest = [];
+  const tmpFiles = [];
+  const emlItems = []; // { row, outputPath } pairs for post-render .eml generation
 
   for (let i = 0; i < activeRows.length; i++) {
     const row = { ...workspaceDefaults, ...activeRows[i] };
@@ -298,47 +302,65 @@ export async function renderJob(jobDir, format = 'png', onProgress, emailTemplat
 
     const tmpPath = path.join(outputDir, `_tmp_${i}.html`);
     fs.writeFileSync(tmpPath, html, 'utf8');
+    tmpFiles.push(tmpPath);
 
-    const page = await browser.newPage();
-    try {
-      await page.setViewportSize({ width, height });
-      await page.goto(`file:///${tmpPath.replace(/\\/g, '/')}`, { waitUntil: 'networkidle', timeout: 30000 });
+    manifest.push({ html: tmpPath, output: outputPath, format, width, height });
+    results.push({ name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath), row: { ...row }, qrWarned });
 
-      if (format === 'png') {
-        await page.screenshot({ path: outputPath, clip: { x: 0, y: 0, width, height }, timeout: 30000 });
-      } else {
-        await page.pdf({
-          path: outputPath,
-          width:  `${width}px`,
-          height: `${height}px`,
-          printBackground: true,
-          timeout: 30000,
-        });
-      }
-    } finally {
-      await page.close();
-      fs.removeSync(tmpPath);
-    }
-
-    const result = { name: row.FullName || `Recipient ${i + 1}`, file: path.basename(outputPath), row: { ...row }, qrWarned };
-    results.push(result);
-
-    // Generate matching .eml if an email template was selected
     if (emailTemplateHtml && emailTemplateMeta) {
-      const emailHtml    = applyReplacements(emailTemplateHtml, row);
-      const emailSubject = applyReplacements(emailTemplateMeta.subject || 'Your credential is ready', row);
-      const eml          = buildEml(emailHtml, row, emailSubject);
-      const emlPath      = outputPath.replace(/\.(pdf|png)$/i, '.eml');
-      fs.writeFileSync(emlPath, eml, 'utf8');
+      emlItems.push({ row, outputPath });
     }
-
-    // Persist results incrementally so a crash doesn't lose all progress
-    await fs.writeJson(path.join(outputDir, 'results.json'), results, { spaces: 2 });
-
-    if (onProgress) onProgress(i + 1, activeRows.length, result);
   }
 
-  await browser.close();
+  if (manifest.length > 0) {
+    const require = createRequire(import.meta.url);
+    const electronBin = require('electron');
+    const mainScriptPath = fileURLToPath(new URL('./electron-renderer-main.cjs', import.meta.url));
+    const manifestPath = path.join(outputDir, '_manifest.json');
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
+
+    const nonSkipped = results.filter(r => !r.skipped);
+    let renderDone = results.filter(r => r.skipped).length;
+
+    await new Promise((resolve, reject) => {
+      const proc = spawn(electronBin, [mainScriptPath, `--manifest=${manifestPath}`], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      let buf = '';
+      proc.stdout.on('data', chunk => {
+        buf += chunk.toString();
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const msg = JSON.parse(line);
+            if (typeof msg.done === 'number') {
+              renderDone++;
+              const result = nonSkipped[msg.done - 1];
+              fs.writeJsonSync(path.join(outputDir, 'results.json'), results, { spaces: 2 });
+              if (onProgress) onProgress(renderDone, activeRows.length, result);
+            }
+          } catch {}
+        }
+      });
+
+      proc.stderr.on('data', chunk => process.stderr.write(chunk));
+      proc.on('close', code => code === 0 ? resolve() : reject(new Error(`Renderer process exited with code ${code}`)));
+    });
+
+    for (const f of tmpFiles) fs.removeSync(f);
+    fs.removeSync(manifestPath);
+  }
+
+  // Generate .eml files for each rendered credential
+  for (const { row, outputPath } of emlItems) {
+    const emailHtml    = applyReplacements(emailTemplateHtml, row);
+    const emailSubject = applyReplacements(emailTemplateMeta.subject || 'Your credential is ready', row);
+    const eml          = buildEml(emailHtml, row, emailSubject);
+    fs.writeFileSync(outputPath.replace(/\.(pdf|png)$/i, '.eml'), eml, 'utf8');
+  }
 
   await fs.writeJson(path.join(outputDir, 'results.json'), results, { spaces: 2 });
 
