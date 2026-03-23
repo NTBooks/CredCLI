@@ -29,7 +29,7 @@ export default function SendToChainletter({ jobArg, yes, no }) {
       setError('Cancelled.');
       setTimeout(() => exit(), 100);
     }
-  });
+  }, { isActive: !yes && !no });
 
   useEffect(() => {
     if (!jobArg) {
